@@ -1,9 +1,8 @@
 import streamlit as st
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, ColorClip, TextClip
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip
 from gtts import gTTS
 import tempfile
 from PIL import Image
-import base64
 
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wide")
@@ -12,15 +11,14 @@ st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wid
 st.markdown("""
 <style>
 body { background-color: #0e0f14; }
-.main-title { font-size: 36px; font-weight: 800; color: #ffffff; margin-bottom:0px;}
+.main-title { font-size: 38px; font-weight: 800; color: #ffffff; margin-bottom:0px;}
 .sub-title { font-size: 18px; color: #cfcfcf; margin-top:0px;}
 .card { background: #171a23; border-radius: 18px; padding: 20px; color: #ffffff; box-shadow: 0 8px 25px rgba(0,0,0,0.4); margin-bottom:20px;}
 .section-title { font-size: 24px; font-weight: 700; color: #4da6ff; margin-bottom:10px;}
 .small-text { color: #dddddd; font-size: 14px; line-height: 1.4; }
 .footer-nav { position: fixed; bottom: 0; width: 100%; background: #171a23; padding: 10px; text-align: center; color: #aaaaaa; font-size: 14px; border-top: 1px solid #2b2f3a;}
-.profile-top {position: fixed; top: 10px; right: 15px; width: 100px; text-align:center; z-index:999;}
-.profile-top img {border-radius:50%; width:100px; height:100px;}
-.sidebar-icon {width:30px; margin-right:5px;}
+.profile-top {position: fixed; top: 10px; right: 15px; width: 120px; text-align:center; z-index:999;}
+.profile-top img {border-radius:50%; width:120px; height:120px;}
 .share-buttons a {margin-right: 5px; text-decoration:none; color:white; background-color:#4da6ff; padding:4px 8px; border-radius:6px; font-size:14px;}
 .ad-grid {display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); grid-gap:10px;}
 .ad-card {background:#222431; border-radius:12px; padding:10px; text-align:center;}
@@ -31,7 +29,7 @@ body { background-color: #0e0f14; }
 # ---------------- SESSION STATE DEFAULTS ----------------
 defaults = {
     "profile_created": False, "user_name": "", "user_email": "", "user_brand": "", "user_gender": "Male",
-    "slogan": "", "script": "", "audio": None, "human_img": None, "product_img": None,
+    "slogan": "", "script": "", "audio": None, "product_img": None,
     "ads_history": []
 }
 for k, v in defaults.items():
@@ -46,13 +44,6 @@ def save_uploaded_file(uploaded_file):
     temp_file.close()
     return temp_file.name
 
-def generate_with_llama(prompt):
-    if "slogan" in prompt.lower():
-        return "Unleash Energy. Unstoppable You."
-    elif "script" in prompt.lower():
-        return "Introducing RedBull — the energy that keeps you moving."
-    return "Your brand. Your moment."
-
 def generate_voiceover(text):
     lang = "en"
     tts = gTTS(text=text, lang=lang)
@@ -60,13 +51,16 @@ def generate_voiceover(text):
     tts.save(temp_audio.name)
     return temp_audio.name
 
-def generate_placeholder_video(human_img_path=None):
-    # Placeholder animated color video
+def generate_placeholder_video(product_img_path, text, audio_path=None):
+    # Simple product video with text animation
+    if not product_img_path:
+        clip = ImageClip("https://i.postimg.cc/CLnTFRX1/Screenshot-2026-01-22-232250.png").set_duration(5)
+    else:
+        clip = ImageClip(product_img_path).set_duration(5)
+    txt_clip = TextClip(text, fontsize=40, color="white").set_position("center").set_duration(5)
+    final = CompositeVideoClip([clip, txt_clip])
     temp_vid = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    clip = ColorClip(size=(480,360), color=(50,50,150), duration=5)
-    text = TextClip("🎬 AI Video Placeholder", fontsize=30, color='white').set_duration(5).set_position('center')
-    final = CompositeVideoClip([clip, text])
-    final.write_videofile(temp_vid.name, fps=24, codec="libx264", audio=False, ffmpeg_params=["-pix_fmt","yuv420p"])
+    final.write_videofile(temp_vid.name, fps=24, codec="libx264", audio_codec="aac", ffmpeg_params=["-pix_fmt","yuv420p"])
     return temp_vid.name
 
 # ---------------- PROFILE CREATION ----------------
@@ -104,15 +98,15 @@ if menu=="Home":
         st.image("https://i.postimg.cc/CLnTFRX1/Screenshot-2026-01-22-232250.png", width=120)
     with col2:
         st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
-        st.markdown('<div class="sub-title">Turn your ideas into cinematic AI ads.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-title">Turn your product ideas into animated AI ads.</div>', unsafe_allow_html=True)
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🚀 Features</div>', unsafe_allow_html=True)
     st.markdown("""
     <ul class='small-text'>
-    <li>AI slogans & scripts generation</li>
-    <li>Voiceover with Male/Female voices</li>
-    <li>Animated placeholder video (always works!)</li>
-    <li>Overlay product images & slogans</li>
+    <li>Upload product images</li>
+    <li>Add animated captions & emojis</li>
+    <li>Generate voiceover for your text</li>
+    <li>View past ads & ratings</li>
     <li>Share ads to Instagram, WhatsApp, Telegram, LinkedIn</li>
     </ul>
     """, unsafe_allow_html=True)
@@ -123,38 +117,28 @@ elif menu=="Ad Studio":
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🎬 Ad Studio</div>', unsafe_allow_html=True)
     product = st.text_input("🛒 Product / Topic")
-    if st.button("✨ Generate Slogan + Script (AI)"):
-        if not product: st.error("Enter a product.")
-        else:
-            st.session_state.slogan = generate_with_llama(f"slogan for {product}")
-            st.session_state.script = generate_with_llama(f"script for {product}")
-            st.success("AI slogan & script generated!")
-
-    st.text_input("💡 AI Slogan", value=st.session_state.slogan or "")
-    st.text_area("📝 AI Script", value=st.session_state.script or "", height=120)
-
-    human_file = st.file_uploader("🧑 Human Image", type=["png","jpg","jpeg"])
+    slogan = st.text_input("💡 Slogan / Caption")
+    text_overlay = st.text_area("📝 Text for Video", height=100)
     product_file = st.file_uploader("📦 Product Image", type=["png","jpg","jpeg"])
 
     if st.button("🔊 Generate Voiceover"):
-        if not st.session_state.script: st.error("Generate script first.")
+        if not text_overlay: st.error("Enter text first.")
         else:
-            st.session_state.audio = generate_voiceover(st.session_state.script)
+            st.session_state.audio = generate_voiceover(text_overlay)
             st.audio(st.session_state.audio)
             st.success("Voiceover ready!")
 
-    if st.button("🎥 Generate Animated AI Video"):
-        # Always generate placeholder if upload fails
-        human_path = save_uploaded_file(human_file) if human_file else None
+    if st.button("🎥 Generate Animated Product Video"):
         product_path = save_uploaded_file(product_file) if product_file else None
-        talking_video = generate_placeholder_video(human_path)
-        st.video(talking_video)
+        video = generate_placeholder_video(product_path, text_overlay or "Your Product Here", st.session_state.audio)
+        st.video(video)
         st.session_state.ads_history.append({
             "product": product or "Sample Product",
-            "slogan": st.session_state.slogan or "Sample Slogan",
-            "video": talking_video
+            "slogan": slogan or "Sample Slogan",
+            "text": text_overlay or "Your Text",
+            "video": video
         })
-        st.success("Video generated (placeholder for presentation)!")
+        st.success("Animated product video generated!")
         st.markdown("""
         <div class="share-buttons">
             <a href="https://www.instagram.com" target="_blank">Instagram</a>
@@ -163,6 +147,7 @@ elif menu=="Ad Studio":
             <a href="https://www.linkedin.com/" target="_blank">LinkedIn</a>
         </div>
         """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------- MY ADS ----------------
 elif menu=="My Ads":
@@ -170,9 +155,10 @@ elif menu=="My Ads":
     if not st.session_state.ads_history:
         st.info("No ads generated yet.")
     else:
-        for ad in st.session_state.ads_history:
-            st.markdown(f"**{ad['product']}** - {ad['slogan']}")
+        for idx, ad in enumerate(st.session_state.ads_history, 1):
+            st.markdown(f"**{idx}. {ad['product']}** - {ad['slogan']}")
             st.video(ad['video'])
+            st.markdown(f"**Text:** {ad['text']}")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------- FOOTER ----------------
