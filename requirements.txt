@@ -5,3 +5,4 @@ Pillow==10.4.0
 rembg==2.0.52
 moviepy==1.0.3
 requests==2.31.0
+gTTS==2.3.2
