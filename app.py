@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 from groq import Groq
-from elevenlabs import generate  # Updated import for v1.x SDK
 from PIL import Image, ImageDraw, ImageFont
 from rembg import remove
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
@@ -13,7 +12,7 @@ GROQ_API_KEY = st.secrets["groq_api_key"]
 ELEVENLABS_API_KEY = st.secrets["elevenlabs_api_key"]
 ELEVENLABS_VOICE_ID = st.secrets["elevenlabs_voice_id"]
 
-# Initialize Groq client (Eleven Labs doesn't need a client object in v1.x)
+# Initialize Groq client
 groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Function to generate script
@@ -26,20 +25,29 @@ def generate_script(topic):
     )
     return response.choices[0].message.content.strip()
 
-# Function to generate voiceover MP3
+# Function to generate voiceover MP3 (using direct API call)
 def generate_voiceover(text, voice_id):
-    # Updated for v1.x SDK: Use generate() directly
-    audio = generate(
-        text=text,
-        voice=voice_id,
-        api_key=ELEVENLABS_API_KEY,  # Pass API key here
-        model="eleven_monolingual_v1"
-    )
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
-        # Save the audio bytes
-        with open(temp_file.name, "wb") as f:
-            f.write(audio)
-        return temp_file.name
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": ELEVENLABS_API_KEY
+    }
+    data = {
+        "text": text,
+        "model_id": "eleven_monolingual_v1",
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.5
+        }
+    }
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code == 200:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
+            temp_file.write(response.content)
+            return temp_file.name
+    else:
+        raise Exception(f"Eleven Labs API error: {response.status_code} - {response.text}")
 
 # Function to edit image (background removal, text overlay, resize)
 def edit_image(image_file, text_overlay, resize_width=800, resize_height=600):
@@ -93,12 +101,15 @@ if st.button("Generate Script"):
 
 # Step 2: Voiceover Generation
 if "script" in st.session_state and st.button("Generate Voiceover MP3"):
-    audio_path = generate_voiceover(st.session_state.script, ELEVENLABS_VOICE_ID)
-    st.session_state.audio_path = audio_path
-    st.success("Voiceover generated!")
-    st.audio(audio_path, format="audio/mp3")
-    with open(audio_path, "rb") as file:
-        st.download_button("Download MP3", file, file_name="voiceover.mp3")
+    try:
+        audio_path = generate_voiceover(st.session_state.script, ELEVENLABS_VOICE_ID)
+        st.session_state.audio_path = audio_path
+        st.success("Voiceover generated!")
+        st.audio(audio_path, format="audio/mp3")
+        with open(audio_path, "rb") as file:
+            st.download_button("Download MP3", file, file_name="voiceover.mp3")
+    except Exception as e:
+        st.error(f"Error generating voiceover: {e}")
 
 # Step 3: Image Editing
 uploaded_image = st.file_uploader("Upload an image for billboard (PNG/JPG)", type=["png", "jpg", "jpeg"])
