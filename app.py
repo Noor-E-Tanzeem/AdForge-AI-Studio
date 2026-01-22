@@ -49,9 +49,9 @@ body { background-color: #0e0f14; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- SIDEBAR ----------------
+# ---------------- SIDEBAR (ROBOT IMAGE HERE) ----------------
 st.sidebar.image(
-    "https://i.postimg.cc/CLnTFRX1/Screenshot-2026-01-22-232250.png",
+    "https://i.postimg.cc/Dwg8cpgg/Screenshot-2026-01-22-234840.png",
     width=180,
     caption="AdForge AI"
 )
@@ -69,7 +69,7 @@ def load_image(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content))
 
-# ---------------- AI (LLaMA PLACEHOLDER) ----------------
+# ---------------- AI (PLACEHOLDER) ----------------
 def generate_with_llama(prompt):
     if "slogan" in prompt.lower():
         return "Unleash Energy. Unstoppable You."
@@ -148,15 +148,16 @@ if menu == "Home":
     col1, col2 = st.columns([1, 4])
 
     with col1:
+        # SMALL TV-AD STYLE BANNER HERE
         small_banner = load_image(
-            "https://i.postimg.cc/Dwg8cpgg/Screenshot-2026-01-22-234840.png"
+            "https://i.postimg.cc/CLnTFRX1/Screenshot-2026-01-22-232250.png"
         )
-        st.image(small_banner, width=160)
+        st.image(small_banner, width=170)
 
     with col2:
         st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="sub-title">Create cinematic AI advertisements with talking humans.</div>',
+            '<div class="sub-title">Turn ideas into cinematic AI advertisements.</div>',
             unsafe_allow_html=True
         )
 
@@ -166,9 +167,9 @@ if menu == "Home":
         st.markdown('<div class="section-title">🚀 About</div>', unsafe_allow_html=True)
         st.markdown(
             "<div class='small-text'>"
-            "AdForge AI Studio is a next-gen advertising tool that auto-creates "
-            "professional ads using AI. Just enter your product, upload a human face "
-            "and a product image — and let AI handle the rest."
+            "AdForge AI Studio is a next-gen advertising platform that auto-creates "
+            "professional ad creatives using AI. Upload a human image, product image, "
+            "and let AI generate scripts, voiceovers, billboards, and videos."
             "</div>", unsafe_allow_html=True
         )
 
@@ -205,7 +206,7 @@ elif menu == "Ad Studio":
     st.text_input("AI Slogan", value=st.session_state.slogan or "")
     script = st.text_area("AI Script", value=st.session_state.script or "", height=120)
 
-    st.markdown("### 🧑 Upload Human Face (for talking ad)")
+    st.markdown("### 🧑 Upload Human Image (for talking ad)")
     human = st.file_uploader("Human Image", type=["png","jpg","jpeg"])
     if human:
         st.session_state.human_img = human
