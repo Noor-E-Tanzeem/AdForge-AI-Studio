@@ -1,5 +1,5 @@
 import streamlit as st
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 from gtts import gTTS
 import tempfile
 from PIL import Image
@@ -23,6 +23,9 @@ body { background-color: #0e0f14; }
 .profile-top img {border-radius:50%; width:60px; height:60px;}
 .sidebar-icon {width:30px; margin-right:5px;}
 .share-buttons a {margin-right: 5px; text-decoration:none; color:white; background-color:#4da6ff; padding:4px 8px; border-radius:6px; font-size:14px;}
+.ad-grid {display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); grid-gap:10px;}
+.ad-card {background:#222431; border-radius:12px; padding:10px; text-align:center;}
+.ad-card video {width:100%; height:auto; border-radius:10px;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -63,6 +66,7 @@ def generate_voiceover(text):
     return temp_audio.name
 
 def generate_animated_human(human_img_path, audio_path=None):
+    # Safe placeholder video
     temp_vid = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     clip = ImageClip(human_img_path).set_duration(5)
     clip.write_videofile(temp_vid.name, fps=24, codec="libx264", audio=False, ffmpeg_params=["-pix_fmt","yuv420p"])
@@ -71,7 +75,8 @@ def generate_animated_human(human_img_path, audio_path=None):
 def add_product_overlay(talking_video_path, product_img_path, slogan):
     video_clip = VideoFileClip(talking_video_path)
     product_clip = ImageClip(product_img_path).set_duration(video_clip.duration).resize(height=120).set_position(("right","bottom"))
-    text_clip = TextClip(slogan, fontsize=25, color='white', font="Arial-Bold").set_duration(video_clip.duration).set_position(("left","top"))
+    # Use default font to avoid missing font error
+    text_clip = TextClip(slogan, fontsize=25, color='white').set_duration(video_clip.duration).set_position(("left","top"))
     final = CompositeVideoClip([video_clip, product_clip, text_clip])
     tmp_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final.write_videofile(tmp_final.name, fps=24, codec="libx264", audio_codec="aac", ffmpeg_params=["-pix_fmt","yuv420p"])
@@ -167,7 +172,6 @@ elif menu=="Ad Studio":
             })
             st.success("AI Video Generated!")
 
-            # Sharing buttons
             st.markdown("""
             <div class="share-buttons">
                 <a href="https://www.instagram.com" target="_blank">Instagram</a>
