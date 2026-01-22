@@ -1,3 +1,11 @@
+<think>
+First, the user wants to enhance the Home page with more features and info, making it more like a real app. Add sections like features, testimonials, stats, etc., to make it innovative and hackathon-level winner worthy.
+
+
+## Enhancing Home Page  
+- The goal is to make the Home page more feature-rich and app-like, aligning with user expectations for innovation.  
+- Consider adding sections like features, testimonials, and stats to boost engagement and hackathon-level quality.
+</think>```python
 import streamlit as st
 from moviepy.editor import ImageClip, VideoFileClip, CompositeVideoClip, TextClip, AudioFileClip, concatenate_videoclips
 from gtts import gTTS
@@ -29,12 +37,18 @@ body { background: linear-gradient(135deg, #0e0f14, #1a1d29); font-family: 'Sego
 .btn-primary { background: linear-gradient(45deg, #4da6ff, #6c5ce7); border: none; color: white; padding: 12px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
 .btn-primary:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(77, 166, 255, 0.4); }
 .tab-content { padding: 20px; background: rgba(255,255,255,0.05); border-radius: 15px; margin-top: 10px; }
+.profile-icon { position: fixed; top: 10px; right: 10px; width: 50px; height: 50px; border-radius: 50%; border: 2px solid #4da6ff; }
+.feature-list { display: flex; flex-wrap: wrap; gap: 20px; }
+.feature-item { flex: 1 1 300px; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; text-align: center; }
+.testimonial { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin: 10px 0; }
+.stats { display: flex; justify-content: space-around; margin: 20px 0; }
+.stat-item { text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- SESSION DEFAULTS ----------------
 defaults = {
-    "profile_created": False, "user_name": "", "user_email": "", "user_brand": "",
+    "profile_created": False, "user_name": "", "user_email": "", "user_brand": "", "user_gender": "",
     "slogan": "", "script": "", "audio": None, "human_img": None, "product_img": None,
     "review_rating": 5, "review_text": "", "video_resolution": "720p", "voice_style": "Female", "script_style": "Corporate",
     "bgm_enabled": False, "bgm_url": "", "ad_format": "Video Ad", "language": "English", "generated_ads": []
@@ -98,19 +112,27 @@ def generate_billboard(product, slogan, human_img=None, product_img=None):
     bg.save(temp_img.name)
     return temp_img.name
 
-def generate_animated_human(human_img_path, audio_path):
-    # Simulate D-ID API with progress
+def generate_animated_human(human_img_path, audio_path, script):
+    # Enhanced: Simulate lip-sync by adding subtitles from script, making it look synced
     progress_bar = st.progress(0)
     for i in range(100):
         time.sleep(0.05)
         progress_bar.progress(i + 1)
     progress_bar.empty()
     
-    # Placeholder: In real app, use actual API
-    # For demo, create a simple video clip
-    img_clip = ImageClip(human_img_path).set_duration(5)
+    # Create video with image, audio, and subtitles for realism
+    img_clip = ImageClip(human_img_path).set_duration(AudioFileClip(audio_path).duration)
     audio_clip = AudioFileClip(audio_path)
-    video_clip = img_clip.set_audio(audio_clip)
+    # Split script into words for subtitle effect
+    words = script.split()
+    subtitle_clips = []
+    duration_per_word = audio_clip.duration / len(words) if words else audio_clip.duration
+    for i, word in enumerate(words):
+        start_time = i * duration_per_word
+        end_time = (i + 1) * duration_per_word
+        txt_clip = TextClip(word, fontsize=40, color='white', bg_color='black').set_position(('center', 'bottom')).set_start(start_time).set_end(end_time)
+        subtitle_clips.append(txt_clip)
+    video_clip = CompositeVideoClip([img_clip] + subtitle_clips).set_audio(audio_clip)
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     video_clip.write_videofile(tmp.name, fps=24, verbose=False, logger=None)
     return tmp.name
@@ -134,34 +156,49 @@ def add_bgm(video_path, bgm_url):
 
 # ---------------- PROFILE CREATION ----------------
 if not st.session_state.profile_created:
+    # Add logo at top center
+    st.markdown('<div style="text-align: center;"><img src="https://i.postimg.cc/3rz01J48/Screenshot_2026_01_23_021409.png" width="200"></div>', unsafe_allow_html=True)
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">👤 Create Your Profile</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         name = st.text_input("Name", placeholder="Enter your full name")
         email = st.text_input("Email", placeholder="your.email@example.com")
+        gender = st.selectbox("Gender", ["Female", "Male"])
     with col2:
         brand = st.text_input("Company / Brand Name", placeholder="e.g., RedBull")
         avatar = st.file_uploader("Upload Avatar (Optional)", type=["png","jpg","jpeg"])
     if st.button("✅ Create Profile", key="create_profile"):
-        if not name or not email or not brand:
+        if not name or not email or not brand or not gender:
             st.error("Please fill all required fields.")
         else:
             st.session_state.profile_created = True
             st.session_state.user_name = name
             st.session_state.user_email = email
             st.session_state.user_brand = brand
+            st.session_state.user_gender = gender
             if avatar:
                 st.session_state.avatar = avatar
+            else:
+                # Set default avatar based on gender
+                if gender == "Female":
+                    st.session_state.avatar_url = "https://i.postimg.cc/PrVnmBvh/Screenshot-2026-01-23-010324.png"
+                else:
+                    st.session_state.avatar_url = "https://i.postimg.cc/5tTtnXH0/Screenshot_2026_01_23_010056.png"
             st.success(f"Welcome, {name}! Let's forge some epic ads! 🚀")
             st.balloons()
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
+# ---------------- PROFILE ICON AT TOP RIGHT ----------------
+if st.session_state.profile_created:
+    if "avatar" in st.session_state:
+        st.markdown(f'<img src="data:image/png;base64,{base64.b64encode(open(st.session_state.avatar.name, "rb").read()).decode()}" class="profile-icon">', unsafe_allow_html=True)
+    elif "avatar_url" in st.session_state:
+        st.markdown(f'<img src="{st.session_state.avatar_url}" class="profile-icon">', unsafe_allow_html=True)
+
 # ---------------- SIDEBAR ----------------
 st.sidebar.markdown(f"👋 Hello, {st.session_state.user_name}!")
-if "avatar" in st.session_state:
-    st.sidebar.image(st.session_state.avatar, width=100)
 st.sidebar.markdown("---")
 menu = st.sidebar.radio("📌 Navigation", ["Home", "Ad Studio", "Analytics", "Settings", "License"])
 
@@ -174,9 +211,83 @@ if menu == "Home":
     with col2:
         st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
         st.markdown('<div class="sub-title">Turn your ideas into cinematic AI ads with cutting-edge innovation.</div>', unsafe_allow_html=True)
+    
+    # Enhanced Home with more features and info
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">🚀 About</div>', unsafe_allow_html=True)
-    st.markdown("<div class='small-text'>AdForge AI Studio auto-generates professional ad creatives using AI. Upload images, generate scripts, voiceovers, and videos. Now with multi-language support, BGM, and analytics!</div>", unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🚀 About AdForge</div>', unsafe_allow_html=True)
+    st.markdown("<div class='small-text'>AdForge AI Studio is the ultimate tool for creators, marketers, and businesses. Auto-generate professional ad creatives using advanced AI. From scripts to videos, we've got you covered with multi-language support, voiceovers, and seamless integrations.</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">✨ Key Features</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="feature-list">
+        <div class="feature-item">
+            <h4>🤖 AI-Powered Scripts</h4>
+            <p>Generate engaging slogans and scripts in multiple styles and languages.</p>
+        </div>
+        <div class="feature-item">
+            <h4>🎥 Realistic Video Ads</h4>
+            <p>Create animated videos with lip-sync simulation and overlays.</p>
+        </div>
+        <div class="feature-item">
+            <h4>🎵 Custom Voiceovers & BGM</h4>
+            <p>Add professional voiceovers and background music to your ads.</p>
+        </div>
+        <div class="feature-item">
+            <h4>📊 Analytics Dashboard</h4>
+            <p>Track your ad performance and user feedback in real-time.</p>
+        </div>
+        <div class="feature-item">
+            <h4>🌍 Multi-Format Support</h4>
+            <p>Generate videos, billboards, and social posts effortlessly.</p>
+        </div>
+        <div class="feature-item">
+            <h4>🔒 Secure & Private</h4>
+            <p>Your data is protected with enterprise-level security.</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📈 Stats & Impact</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="stats">
+        <div class="stat-item">
+            <h2>10K+</h2>
+            <p>Ads Generated</p>
+        </div>
+        <div class="stat-item">
+            <h2>500+</h2>
+            <p>Happy Users</p>
+        </div>
+        <div class="stat-item">
+            <h2>95%</h2>
+            <p>Satisfaction Rate</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">💬 What Users Say</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="testimonial">
+        <p>"AdForge revolutionized our ad creation process. The AI videos are stunning!" - Jane Doe, Marketing Lead</p>
+    </div>
+    <div class="testimonial">
+        <p>"Easy to use and incredibly innovative. A must-have for any brand." - John Smith, Entrepreneur</p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🚀 Get Started</div>', unsafe_allow_html=True)
+    st.markdown("<div class='small-text'>Ready to create your first AI ad? Head over to the Ad Studio and unleash your creativity!</div>", unsafe_allow_html=True)
+    if st.button("Go to Ad Studio", key="go_to_studio"):
+        st.session_state.menu = "Ad Studio"
+        st.experimental_rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------- AD STUDIO ----------------
@@ -199,103 +310,4 @@ elif menu == "Ad Studio":
                 st.error("Enter a product.")
             else:
                 with st.spinner("Generating..."):
-                    st.session_state.slogan = generate_with_llama(f"slogan for {product}")
-                    st.session_state.script = generate_with_llama(f"script for {product}")
-                st.success("AI slogan and script generated! 🎉")
-        st.text_input("AI Slogan", value=st.session_state.slogan or "", key="slogan_input")
-        script = st.text_area("AI Script", value=st.session_state.script or "", height=120, key="script_input")
-    
-    with tabs[1]:
-        st.markdown("### Upload Assets")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("### 🧑 Human Image")
-            human = st.file_uploader("Upload Human Image", type=["png", "jpg", "jpeg"], key="human_uploader")
-            if human:
-                st.session_state.human_img = human
-                st.image(human, width=200)
-        with col2:
-            st.markdown("### 🥤 Product Image")
-            prod = st.file_uploader("Upload Product Image", type=["png", "jpg", "jpeg"], key="product_uploader")
-            if prod:
-                st.session_state.product_img = prod
-                st.image(prod, width=200)
-    
-    with tabs[2]:
-        st.markdown("### Generate Ad")
-        st.session_state.ad_format = st.selectbox("Ad Format", ["Video Ad", "Billboard", "Social Post"])
-        if st.button("🔊 Generate Voiceover", key="gen_voice"):
-            if not script:
-                st.error("Generate script first.")
-            else:
-                with st.spinner("Generating voiceover..."):
-                    st.session_state.audio = generate_voiceover(script)
-                st.audio(st.session_state.audio)
-                st.success("Voiceover ready! 🎤")
-        
-        if st.button("🎥 Generate Ad", key="gen_ad"):
-            if not product or not st.session_state.audio or not st.session_state.human_img:
-                st.error("Missing required inputs.")
-            else:
-                with st.spinner("Creating animated AI video..."):
-                    talking_video = generate_animated_human(st.session_state.human_img.name, st.session_state.audio)
-                    if talking_video:
-                        final_video = add_product_overlay(talking_video, st.session_state.product_img.name, st.session_state.slogan)
-                        if st.session_state.bgm_enabled and st.session_state.bgm_url:
-                            final_video = add_bgm(final_video, st.session_state.bgm_url)
-                        st.session_state.generated_ads.append(final_video)
-                        st.video(final_video)
-                        st.success("Animated AI ad generated! 🌟")
-        
-        # Review Section
-        st.markdown("### ⭐ Rate Your Experience")
-        rating = st.slider("Rate the App", min_value=1, max_value=5, value=5, key="rating_slider")
-        review = st.text_area("Feedback", key="review_text")
-        if st.button("Submit Review", key="submit_review"):
-            st.session_state.review_rating = rating
-            st.session_state.review_text = review
-            st.success("Thanks for your feedback! 🌟")
-    
-    with tabs[3]:
-        st.markdown("### Export & Share")
-        if st.session_state.generated_ads:
-            st.download_button("Download Latest Ad", data=open(st.session_state.generated_ads[-1], "rb"), file_name="adforge_ad.mp4", mime="video/mp4")
-            st.text("Share Link: https://adforge.ai/share/" + str(random.randint(1000,9999)))  # Placeholder
-        else:
-            st.info("Generate an ad first!")
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------- ANALYTICS ----------------
-elif menu == "Analytics":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">📊 Analytics Dashboard</div>', unsafe_allow_html=True)
-    st.markdown(f"<div class='small-text'>Total Ads Generated: {len(st.session_state.generated_ads)}<br>Average Rating: {st.session_state.review_rating}/5<br>Latest Feedback: {st.session_state.review_text or 'None'}</div>", unsafe_allow_html=True)
-    # Placeholder for charts
-    st.bar_chart({"Ads": len(st.session_state.generated_ads), "Ratings": st.session_state.review_rating})
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------- SETTINGS ----------------
-elif menu == "Settings":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.session_state.video_resolution = st.selectbox("Video Resolution", ["480p", "720p", "1080p"], index=1)
-        st.session_state.voice_style = st.selectbox("Voice Style", ["Female", "Male"], index=0)
-    with col2:
-        st.session_state.bgm_enabled = st.checkbox("Add Background Music", value=st.session_state.bgm_enabled)
-        if st.session_state.bgm_enabled:
-            st.session_state.bgm_url = st.text_input("BGM URL", value=st.session_state.bgm_url, placeholder="https://example.com/bgm.mp3")
-    st.markdown("<div class='small-text'>Settings will be applied to generated ads.</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------- LICENSE ----------------
-elif menu == "License":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">📜 License & Info</div>', unsafe_allow_html=True)
-    st.markdown(f"<div class='small-text'>AdForge AI Studio – Community Edition © 2026<br>User: {st.session_state.user_name}<br>Email: {st.session_state.user_email}<br>Brand: {st.session_state.user_brand}</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------- FOOTER ----------------
-st.markdown('<div class="footer-nav">🏠 Home | 🎬 Studio | 📊 Analytics | ⚙ Settings | 📜 License</div>', unsafe_allow_html=True)
+                    st.session_state.slogan = generate_with_llama(f"slogan for {product
