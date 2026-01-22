@@ -1,8 +1,9 @@
 import streamlit as st
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip, ColorClip, AudioFileClip
 from gtts import gTTS
+from PIL import Image, ImageDraw, ImageFont
 import tempfile
-from PIL import Image
+import cv2
+import numpy as np
 import os
 
 # ---------------- CONFIG ----------------
@@ -12,7 +13,7 @@ st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wid
 st.markdown("""
 <style>
 body { background-color: #0e0f14; }
-.main-title { font-size: 38px; font-weight: 800; color: #ffffff; margin-bottom:0px;}
+.main-title { font-size: 36px; font-weight: 800; color: #ffffff; margin-bottom:0px;}
 .sub-title { font-size: 18px; color: #cfcfcf; margin-top:0px;}
 .card { background: #171a23; border-radius: 18px; padding: 20px; color: #ffffff; box-shadow: 0 8px 25px rgba(0,0,0,0.4); margin-bottom:20px;}
 .section-title { font-size: 24px; font-weight: 700; color: #4da6ff; margin-bottom:10px;}
@@ -54,29 +55,46 @@ def generate_voiceover(text):
     tts.save(temp_audio.name)
     return temp_audio.name
 
-def generate_product_video(product_img_path, text_overlay, audio_path=None):
-    # Placeholder background if no image
+def generate_product_video_pil(product_img_path, text_overlay, audio_path=None):
+    # Load product image
     if product_img_path:
-        clip = ImageClip(product_img_path).set_duration(8).resize(height=360)
+        img = Image.open(product_img_path).convert("RGB")
+        img = img.resize((640, 360))
     else:
-        clip = ColorClip(size=(480,360), color=(50,50,150)).set_duration(8)
+        img = Image.new("RGB", (640,360), (30,30,60))
+    
+    # Video settings
+    fps = 24
+    duration = 8
+    total_frames = duration * fps
+    font = ImageFont.load_default()
 
-    # Moving text with emojis (scroll up)
-    txt_clip = TextClip(text_overlay or "Your Product Here 🚀🎉", fontsize=28, color="white", method="caption", size=(480,None))
-    txt_clip = txt_clip.set_position(lambda t: ('center', 360 - 50*t)).set_duration(8)
+    temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(temp_video.name, fourcc, fps, (640,360))
 
-    clips = [clip, txt_clip]
+    # Generate frames with scrolling text
+    for i in range(total_frames):
+        frame = img.copy()
+        draw = ImageDraw.Draw(frame)
+        y_pos = 360 - (i*2) % 400  # scrolling effect
+        draw.text((20, y_pos), text_overlay or "Your Product 🚀🎉", font=font, fill=(255,255,255))
+        frame_np = np.array(frame)[:,:,::-1]  # RGB -> BGR for cv2
+        out.write(frame_np)
+    
+    out.release()
 
-    # Add audio if exists
+    # Add audio if exists using moviepy (simpler)
     if audio_path and os.path.exists(audio_path):
-        audio_clip = AudioFileClip(audio_path).subclip(0,8)
-        final = CompositeVideoClip(clips).set_audio(audio_clip)
-    else:
-        final = CompositeVideoClip(clips)
+        from moviepy.editor import VideoFileClip, AudioFileClip
+        clip = VideoFileClip(temp_video.name)
+        audio_clip = AudioFileClip(audio_path).subclip(0, duration)
+        final_clip = clip.set_audio(audio_clip)
+        temp_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        final_clip.write_videofile(temp_final.name, fps=fps, codec="libx264", audio_codec="aac")
+        return temp_final.name
 
-    temp_vid = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    final.write_videofile(temp_vid.name, fps=24, codec="libx264", audio_codec="aac", ffmpeg_params=["-pix_fmt","yuv420p"])
-    return temp_vid.name
+    return temp_video.name
 
 # ---------------- PROFILE CREATION ----------------
 if not st.session_state.profile_created:
@@ -140,18 +158,14 @@ elif menu=="Ad Studio":
     text_overlay = st.text_area("📝 Video Text / Emojis", height=120, value=st.session_state.get("text_overlay",""))
     product_file = st.file_uploader("📦 Product Image", type=["png","jpg","jpeg"])
 
-    # ---- Generate Slogan + Text ----
-    if st.button("✨ Generate Slogan + Text (AI)"):
+    if st.button("✨ Generate Slogan + Text"):
         if not product_name:
             st.error("Enter a product name first!")
         else:
             st.session_state.slogan = f"{product_name} — Boost Your Day!"
             st.session_state.text_overlay = f"Try {product_name} today! 💪⚡🎉"
             st.success("Slogan and text generated!")
-            slogan = st.session_state.slogan
-            text_overlay = st.session_state.text_overlay
 
-    # ---- Generate Voiceover ----
     if st.button("🔊 Generate Voiceover"):
         if not text_overlay:
             st.error("Enter text for voiceover.")
@@ -160,10 +174,9 @@ elif menu=="Ad Studio":
             st.audio(st.session_state.audio)
             st.success("Voiceover ready!")
 
-    # ---- Generate Animated Product Video ----
     if st.button("🎥 Generate Animated Product Video"):
         product_path = save_uploaded_file(product_file) if product_file else None
-        video_path = generate_product_video(product_path, text_overlay or "Your Product Here 🚀🎉", getattr(st.session_state,"audio",None))
+        video_path = generate_product_video_pil(product_path, text_overlay or "Your Product 🚀🎉", getattr(st.session_state,"audio",None))
         st.video(video_path)
         st.session_state.ads_history.append({
             "product": product_name or "Sample Product",
@@ -194,12 +207,10 @@ elif menu=="My Ads":
             st.markdown(f"**{idx}. {ad['product']}** - {ad['slogan']}")
             st.video(ad['video'])
             st.markdown(f"**Text Overlay:** {ad['text']}")
-            # Rating
             rating = st.slider(f"⭐ Rate Ad {idx}", 1,5,value=ad.get("rating") or 5, key=f"rate_{idx}")
             review = st.text_area(f"💬 Review Ad {idx}", value=ad.get("review") or "", key=f"rev_{idx}")
             ad["rating"] = rating
             ad["review"] = review
-            # Download button
             with open(ad["video"], "rb") as f:
                 st.download_button(f"⬇ Download Ad {idx}", f, file_name=f"{ad['product']}.mp4")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -222,7 +233,7 @@ elif menu=="Profile":
 # ---------------- SETTINGS ----------------
 elif menu=="Settings":
     st.markdown('<div class="card"><div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
-    st.markdown("All app settings are currently auto-handled. Future updates will include BGM, fonts, video resolution.")
+    st.markdown("All app settings are auto-handled. Future updates will include BGM, fonts, video resolution.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------- LICENSE ----------------
