@@ -1,6 +1,6 @@
 streamlit==1.28.1
 groq==0.4.1
-elevenlabs==1.0.0  # Updated to latest stable version
+# elevenlabs removed - using requests instead
 Pillow==10.0.1
 rembg==2.0.52
 moviepy==1.0.3
