@@ -1,125 +1,138 @@
+# app.py
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
-import numpy as np
-import cv2
-import tempfile
 from gtts import gTTS
-from pydub import AudioSegment
+from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
+import tempfile
 import os
 
 st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wide")
 
-# ---------------- CSS ----------------
-st.markdown("""
-<style>
-body {background-color:#0e0f14; color:white;}
-.card {background:#171a23; padding:15px; border-radius:15px; margin-bottom:15px;}
-.section-title {font-size:24px; font-weight:bold; color:#4da6ff; margin-bottom:10px;}
-.profile-top {position:fixed; top:10px; right:20px; text-align:center; z-index:999;}
-.profile-top img {border-radius:50%; width:120px; height:120px;}
-.share-buttons a {margin-right:5px; text-decoration:none; color:white; background:#4da6ff; padding:5px 10px; border-radius:6px;}
-</style>
-""", unsafe_allow_html=True)
+# --- Session State Setup ---
+if "profile" not in st.session_state:
+    st.session_state.profile = {
+        "name": "Noor E Tanzeem",
+        "email": "noor@example.com",
+        "gender": "Male",
+        "bio": "Creative Ad Maker",
+        "image_url": "https://i.postimg.cc/3rz01J48/Screenshot-2026-01-23-021409.png"
+    }
 
-# ---------------- SESSION ----------------
-for key in ["name","email","profile_img","ads_history","audio_path"]:
-    if key not in st.session_state:
-        st.session_state[key] = "" if key!="ads_history" else []
+if "ads" not in st.session_state:
+    st.session_state.ads = []
 
-# ---------------- PROFILE ----------------
-st.markdown('<div class="profile-top">', unsafe_allow_html=True)
-profile_img = st.file_uploader("Upload Profile Image", type=["png","jpg","jpeg"], key="profile_img_uploader")
-if profile_img:
-    st.session_state.profile_img = profile_img
-    st.image(profile_img, width=120)
-st.markdown('</div>', unsafe_allow_html=True)
+if "reviews" not in st.session_state:
+    st.session_state.reviews = []
 
-st.title("AdForge AI Studio 🛒")
-st.markdown("Create professional animated ads in seconds!")
+# --- Sidebar / Profile ---
+with st.sidebar:
+    st.image(st.session_state.profile["image_url"], width=150)
+    st.write(f"**{st.session_state.profile['name']}**")
+    st.write(st.session_state.profile["email"])
+    st.write(st.session_state.profile["gender"])
+    st.write(st.session_state.profile["bio"])
+    st.markdown("---")
+    st.write("### Share your Ad Studio")
+    st.markdown(
+        """
+        [Instagram](https://instagram.com) | 
+        [WhatsApp](https://web.whatsapp.com/) | 
+        [Twitter](https://twitter.com)
+        """
+    )
 
-# ---------------- INPUTS ----------------
-with st.expander("Enter Product Details"):
-    product_name = st.text_input("🛒 Product / Topic")
-    slogan_text = st.text_area("💡 Slogan / Caption (7–8 lines max)")
-    voice_lang = st.selectbox("🎤 Voice Language", ["en","hi","es"], index=0)
-    submit_btn = st.button("Generate Ad Video")
+# --- Tabs ---
+tabs = st.tabs(["Home", "Create Ad", "Profile", "Reviews"])
 
-# ---------------- VIDEO GENERATOR ----------------
-def generate_product_video(product_name, slogan_text, voice_lang="en"):
+# --- HOME ---
+with tabs[0]:
+    st.markdown("## Welcome to AdForge AI Studio 🤖")
+    st.image("https://i.postimg.cc/3rz01J48/Screenshot-2026-01-23-021409.png", width=300)
+    st.markdown("""
+    Create professional product ads in minutes.
+    Features:
+    - Product image to video with captions
+    - Animated emoji text
+    - Voiceover narration
+    - Share to social media
+    """)
+    st.markdown("---")
+    st.write("Your previous ads:")
+    for idx, ad in enumerate(st.session_state.ads):
+        st.write(f"**Ad {idx+1}:** {ad['product']} - {ad['slogan']}")
 
-    # ---------------- AUDIO ----------------
-    tts = gTTS(text=slogan_text, lang=voice_lang)
-    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    tts.save(temp_audio.name)
-    audio = AudioSegment.from_file(temp_audio.name)
-    
-    # ---------------- VIDEO ----------------
-    width, height = 640, 360
-    fps = 24
-    duration_sec = max(len(audio)/1000.0, 6)  # min 6 sec
-    n_frames = int(fps*duration_sec)
-    font = ImageFont.truetype("arial.ttf", 28)
+# --- CREATE AD ---
+with tabs[1]:
+    st.subheader("🛒 Product / Topic")
+    product_name = st.text_input("Enter Product Name / Topic")
+    st.subheader("💡 Slogan / Caption")
+    slogan_text = st.text_area("Enter your slogan (max 7 lines)", height=120)
 
-    temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    video_out = cv2.VideoWriter(temp_video.name, fourcc, fps, (width,height))
+    product_img_file = st.file_uploader("Upload Product Image", type=["png", "jpg", "jpeg"])
 
-    # Preprocess multiline text
-    lines = slogan_text.split("\n")
-    line_height = 35
+    generate_btn = st.button("Generate Video 🎬")
 
-    for i in range(n_frames):
-        img = Image.new("RGB",(width,height),(20,20,30))
-        draw = ImageDraw.Draw(img)
-        
-        # Scroll effect
-        offset = int((i/n_frames)*height)
-        for idx, line in enumerate(lines):
-            y = height - offset + idx*line_height
-            draw.text((20,y), line + " 🚀🎉", font=font, fill=(255,255,255))
-        
-        frame = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-        video_out.write(frame)
+    if generate_btn:
+        if not product_name or not slogan_text or not product_img_file:
+            st.error("Please fill all inputs and upload a product image.")
+        else:
+            # --- Save product image temporarily ---
+            product_img = Image.open(product_img_file).convert("RGBA")
+            temp_img_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+            product_img.save(temp_img_file.name)
 
-    video_out.release()
+            # --- Generate audio using gTTS ---
+            tts = gTTS(text=slogan_text, lang="en")
+            temp_audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+            tts.save(temp_audio_file.name)
 
-    # ---------------- ADD AUDIO ----------------
-    # Using pydub to match audio length
-    silent = AudioSegment.silent(duration=duration_sec*1000 - len(audio))
-    final_audio = audio + silent
-    temp_audio_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    final_audio.export(temp_audio_final.name, format="mp3")
+            # --- Create animated text over image ---
+            frames = []
+            for i in range(30):  # 3 seconds, 10 fps
+                frame = product_img.copy()
+                draw = ImageDraw.Draw(frame)
+                font = ImageFont.load_default()
+                text_y = 10 + i*2
+                draw.text((10, text_y), slogan_text + " 🚀🎉", font=font, fill="white")
+                frames.append(frame)
 
-    # Combine video+audio using ffmpeg
-    final_output = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    os.system(f'ffmpeg -y -i "{temp_video.name}" -i "{temp_audio_final.name}" -c:v copy -c:a aac "{final_output.name}"')
+            # --- Create MoviePy video ---
+            clips = [ImageClip(frame).set_duration(0.1) for frame in frames]
+            video_clip = CompositeVideoClip(clips)
 
-    return final_output.name
+            audio_clip = AudioFileClip(temp_audio_file.name)
+            video_clip = video_clip.set_audio(audio_clip)
+            temp_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+            video_clip.write_videofile(temp_final.name, fps=10, codec="libx264", audio_codec="aac")
 
-# ---------------- GENERATE ----------------
-if submit_btn:
-    if not product_name or not slogan_text:
-        st.error("Enter both product name and slogan!")
-    else:
-        st.info("Generating video... This may take ~15 seconds")
-        video_path = generate_product_video(product_name, slogan_text, voice_lang)
-        st.video(video_path)
+            # --- Save ad info ---
+            st.session_state.ads.append({
+                "product": product_name,
+                "slogan": slogan_text,
+                "video_path": temp_final.name
+            })
 
-        # Add to session ads history
-        st.session_state.ads_history.append({"product":product_name, "video":video_path})
+            st.success("🎉 Video Generated!")
+            st.video(temp_final.name)
 
-# ---------------- ADS HISTORY ----------------
-if st.session_state.ads_history:
-    st.markdown("### 📝 Your Generated Ads")
-    for ad in st.session_state.ads_history[::-1]:
-        st.markdown(f"**Product:** {ad['product']}")
-        st.video(ad["video"])
+# --- PROFILE EDIT ---
+with tabs[2]:
+    st.subheader("Edit Profile")
+    st.session_state.profile["name"] = st.text_input("Name", st.session_state.profile["name"])
+    st.session_state.profile["email"] = st.text_input("Email", st.session_state.profile["email"])
+    st.session_state.profile["gender"] = st.selectbox("Gender", ["Male", "Female", "Other"], index=0)
+    st.session_state.profile["bio"] = st.text_area("Bio", st.session_state.profile["bio"])
+    st.session_state.profile["image_url"] = st.text_input("Profile Image URL", st.session_state.profile["image_url"])
+    st.button("Save Profile")
 
-# ---------------- SHARE ----------------
-st.markdown("""
-<div class='share-buttons'>
-<a href='https://instagram.com' target='_blank'>Instagram</a>
-<a href='https://wa.me' target='_blank'>WhatsApp</a>
-<a href='https://facebook.com' target='_blank'>Facebook</a>
-</div>
-""", unsafe_allow_html=True)
+# --- REVIEWS ---
+with tabs[3]:
+    st.subheader("Ratings & Reviews ⭐")
+    rating = st.slider("Your Rating", 1, 5, 5)
+    review_text = st.text_area("Write a review")
+    if st.button("Submit Review"):
+        st.session_state.reviews.append({"rating": rating, "review": review_text})
+        st.success("Review submitted!")
+    st.write("### All Reviews")
+    for rev in st.session_state.reviews:
+        st.write(f"⭐ {rev['rating']} - {rev['review']}")
