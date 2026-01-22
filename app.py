@@ -27,16 +27,21 @@ body { background-color: #0e0f14; }
 .small-text { color: #dddddd; font-size: 16px; line-height: 1.6; }
 .footer-nav { position: fixed; bottom: 0; width: 100%; background: #171a23; padding: 12px; text-align: center; color: #aaaaaa; font-size: 14px; border-top: 1px solid #2b2f3a;}
 .center { text-align: center; }
+.profile-icon { position: absolute; top: 20px; right: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- SESSION DEFAULTS ----------------
 defaults = {
     "profile_created": False, "user_name": "", "user_email": "", "user_brand": "",
-    "slogan": "", "script": "", "audio": None, "human_img": None, "product_img": None,
-    "review_rating": 5, "review_text": "", "video_resolution": "720p",
-    "voice_style": "Female", "script_style": "Corporate"
+    "user_gender": "Male",
+    "slogan": "", "script": "", "audio": None,
+    "human_img": None, "product_img": None,
+    "review_rating": 5, "review_text": "",
+    "video_resolution": "720p", "voice_style": "Female",
+    "script_style": "Corporate"
 }
+
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -52,10 +57,10 @@ def generate_with_llama(prompt):
     elif "script" in prompt.lower():
         style = st.session_state.script_style
         if style == "Funny":
-            return "RedBull gives wings… and laughs! Fly through your day with energy and fun."
+            return "Turn boring into boom! One sip, endless smiles."
         elif style == "Dramatic":
-            return "RedBull empowers you to conquer the impossible. Every sip, a surge of power."
-        return "Introducing RedBull — the energy that keeps you moving. Chase dreams, break limits, fuel ambition."
+            return "Fuel the fire within. Rise. Roar. Repeat."
+        return "Introducing your next obsession — energy that moves you forward."
     return "Your brand. Your power. Your moment."
 
 def generate_voiceover(text):
@@ -70,6 +75,7 @@ def generate_voiceover(text):
 def generate_billboard(product, slogan, human_img=None, product_img=None):
     bg = Image.new("RGB", (1280, 720), (20, 20, 30))
     draw = ImageDraw.Draw(bg)
+
     try:
         font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 70)
         font_slogan = ImageFont.truetype("DejaVuSans.ttf", 42)
@@ -135,6 +141,7 @@ def add_product_overlay(talking_video_path, product_img_path, slogan):
         return None
 
     video_clip = VideoFileClip(talking_video_path)
+
     product_clip = (
         ImageClip(product_img_path)
         .set_duration(video_clip.duration)
@@ -155,14 +162,15 @@ def add_product_overlay(talking_video_path, product_img_path, slogan):
 
 # ---------------- PROFILE CREATION ----------------
 if not st.session_state.profile_created:
+
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    # 🔥 SMALL ICON AT TOP CENTER
-    icon_url = "https://i.postimg.cc/3rz01J48/Screenshot_2026_01_23_021409.png"
+    # Center Logo
+    center_logo = "https://i.postimg.cc/3rz01J48/Screenshot_2026_01_23_021409.png"
     st.markdown(
         f"""
         <div class="center">
-            <img src="{icon_url}" width="80">
+            <img src="{center_logo}" width="90">
         </div>
         """,
         unsafe_allow_html=True
@@ -174,6 +182,8 @@ if not st.session_state.profile_created:
     email = st.text_input("Email")
     brand = st.text_input("Company / Brand Name")
 
+    gender = st.selectbox("Gender", ["Male","Female"])
+
     if st.button("✅ Create Profile"):
         if not name or not email or not brand:
             st.error("Please fill all fields.")
@@ -182,18 +192,36 @@ if not st.session_state.profile_created:
             st.session_state.user_name = name
             st.session_state.user_email = email
             st.session_state.user_brand = brand
-            st.success(f"Welcome, {name}! You can now create ads.")
+            st.session_state.user_gender = gender
+            st.success(f"Welcome, {name}! Your AI studio is ready 🚀")
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
+# ---------------- PROFILE ICON ----------------
+if st.session_state.user_gender == "Male":
+    profile_icon = "https://i.postimg.cc/5tTtnXH0/Screenshot_2026_01_23_010056.png"
+else:
+    profile_icon = "https://i.postimg.cc/PrVnmBvh/Screenshot_2026_01_23_010324.png"
+
+st.markdown(
+    f"""
+    <div class="profile-icon">
+        <img src="{profile_icon}" width="60">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 # ---------------- SIDEBAR ----------------
 st.sidebar.markdown(f"👋 Hello, {st.session_state.user_name}!")
+st.sidebar.markdown(f"🏷 Brand: {st.session_state.user_brand}")
 st.sidebar.markdown("---")
 menu = st.sidebar.radio("📌 Navigation", ["Home","Ad Studio","Settings","License"])
 
 # ---------------- HOME ----------------
 if menu == "Home":
+
     col1, col2 = st.columns([1,4])
 
     with col1:
@@ -214,6 +242,7 @@ if menu == "Home":
 
 # ---------------- AD STUDIO ----------------
 elif menu == "Ad Studio":
+
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🎬 Ad Studio</div>', unsafe_allow_html=True)
 
@@ -256,7 +285,10 @@ elif menu == "Ad Studio":
         if not product or not st.session_state.audio or not st.session_state.human_img:
             st.error("Missing required inputs.")
         else:
-            talking_video = generate_animated_human(st.session_state.human_img, st.session_state.audio)
+            talking_video = generate_animated_human(
+                st.session_state.human_img,
+                st.session_state.audio
+            )
 
             if talking_video:
                 final_video = add_product_overlay(
@@ -282,6 +314,7 @@ elif menu == "Ad Studio":
 
 # ---------------- SETTINGS ----------------
 elif menu == "Settings":
+
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
 
@@ -294,6 +327,7 @@ elif menu == "Settings":
 
 # ---------------- LICENSE ----------------
 elif menu == "License":
+
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📜 License & Info</div>', unsafe_allow_html=True)
 
@@ -301,7 +335,8 @@ elif menu == "License":
         f"<div class='small-text'>AdForge AI Studio – Community Edition © 2026"
         f"<br>User: {st.session_state.user_name}"
         f"<br>Email: {st.session_state.user_email}"
-        f"<br>Brand: {st.session_state.user_brand}</div>",
+        f"<br>Brand: {st.session_state.user_brand}"
+        f"<br>Gender: {st.session_state.user_gender}</div>",
         unsafe_allow_html=True
     )
 
