@@ -3,9 +3,10 @@ from gtts import gTTS
 from groq import Groq
 from PIL import Image, ImageDraw, ImageFont
 from rembg import remove
-from moviepy.editor import ImageClip, AudioFileClip
+from moviepy.editor import ImageClip, AudioFileClip, CompositeAudioClip
 import tempfile
 import os
+import re
 
 # ---------------------------
 # Secrets Handling (Groq only)
@@ -49,14 +50,39 @@ def generate_script(topic):
     raise Exception(f"Groq API error (all models failed): {last_error}")
 
 # ---------------------------
-# Google TTS Voiceover (free)
+# Clean script for TTS
 # ---------------------------
-def generate_voiceover(text):
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    tts = gTTS(text=text, lang='en')  # lang='en' for English
-    tts.save(temp_file.name)
-    temp_file.close()
-    return temp_file.name
+def clean_script(script):
+    cleaned = re.sub(r"\[.*?\]", "", script)
+    cleaned = "\n".join([line.strip() for line in cleaned.splitlines() if line.strip() != ""])
+    return cleaned
+
+# ---------------------------
+# Voiceover + Background Music
+# ---------------------------
+def generate_voiceover_with_music(script_text, music_file=None, voice_volume=1.0, music_volume=0.3):
+    cleaned_text = clean_script(script_text)
+
+    # Generate TTS
+    temp_voice = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    tts = gTTS(text=cleaned_text, lang='en')
+    tts.save(temp_voice.name)
+    temp_voice.close()
+
+    voice_clip = AudioFileClip(temp_voice.name).volumex(voice_volume)
+
+    if music_file:
+        music_clip = AudioFileClip(music_file).volumex(music_volume)
+        music_clip = music_clip.set_duration(voice_clip.duration)
+        music_clip = music_clip.audio_fadein(1).audio_fadeout(1)
+        final_audio = CompositeAudioClip([music_clip, voice_clip])
+    else:
+        final_audio = voice_clip
+
+    temp_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    final_audio.write_audiofile(temp_final.name, fps=44100, verbose=False, logger=None)
+    temp_final.close()
+    return temp_final.name
 
 # ---------------------------
 # Image Editor
@@ -143,23 +169,26 @@ if "script" in st.session_state:
 # 2️⃣ Voiceover Generator
 # ---------------------------
 st.header("2️⃣ Voiceover Generator")
+st.write("Optional: Upload a background music track (MP3) to merge with voiceover.")
+music_file = st.file_uploader("Upload background music (MP3)", type=["mp3"])
+
 if "script" not in st.session_state:
     st.info("Generate a script first to enable voiceover.")
 else:
-    if st.button("Generate Voiceover MP3", key="voice_btn"):
-        st.session_state.generate_voiceover_flag = True
-
-if st.session_state.get("generate_voiceover_flag"):
-    with st.spinner("Generating voiceover..."):
-        try:
-            audio_path = generate_voiceover(st.session_state.script)
-            st.session_state.audio_path = audio_path
-            st.success("Voiceover generated!")
-            st.audio(audio_path, format="audio/mp3")
-            with open(audio_path, "rb") as file:
-                st.download_button("Download MP3", file, file_name="voiceover.mp3")
-        except Exception as e:
-            st.error(str(e))
+    if st.button("Generate Voiceover MP3"):
+        with st.spinner("Generating voiceover..."):
+            try:
+                audio_path = generate_voiceover_with_music(
+                    st.session_state.script,
+                    music_file=music_file.name if music_file else None
+                )
+                st.session_state.audio_path = audio_path
+                st.success("Voiceover generated!")
+                st.audio(audio_path, format="audio/mp3")
+                with open(audio_path, "rb") as file:
+                    st.download_button("Download MP3", file, file_name="voiceover.mp3")
+            except Exception as e:
+                st.error(str(e))
 
 # ---------------------------
 # 3️⃣ Smart Billboard Editor
@@ -187,20 +216,24 @@ if uploaded_image and st.button("Edit Image"):
 # ---------------------------
 st.header("4️⃣ Slideshow Video")
 if "audio_path" in st.session_state and "edited_image_path" in st.session_state:
+    duration = st.slider("Video duration (seconds)", min_value=5, max_value=60, value=10)
     if st.button("Create Slideshow Video"):
-        st.session_state.create_video_flag = True
-
-if st.session_state.get("create_video_flag"):
-    with st.spinner("Creating video..."):
-        try:
-            video_path = create_slideshow_video(st.session_state.edited_image_path, st.session_state.audio_path)
-            st.session_state.video_path = video_path
-            st.success("Video created!")
-            st.video(video_path)
-            with open(video_path, "rb") as file:
-                st.download_button("Download MP4", file, file_name="slideshow.mp4")
-        except Exception as e:
-            st.error(str(e))
+        with st.spinner("Creating video..."):
+            try:
+                video_path = create_slideshow_video(
+                    st.session_state.edited_image_path,
+                    st.session_state.audio_path,
+                    duration=duration
+                )
+                st.session_state.video_path = video_path
+                st.success("Video created!")
+                st.video(video_path)
+                with open(video_path, "rb") as file:
+                    st.download_button("Download MP4", file, file_name="slideshow.mp4")
+            except Exception as e:
+                st.error(str(e))
+else:
+    st.info("Generate voiceover and edit an image first to enable slideshow video.")
 
 # ---------------------------
 # Cleanup Temp Files
