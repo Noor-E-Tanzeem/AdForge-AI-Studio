@@ -1,157 +1,223 @@
-# app.py
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont
+from moviepy.editor import ImageClip, VideoFileClip, CompositeVideoClip, TextClip, AudioFileClip
 from gtts import gTTS
-from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
 import tempfile
-import os
+import requests
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+import base64
 
+# ---------------- CONFIG ----------------
 st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wide")
 
-# ---------------- SESSION STATE -----------------
-if "profile_set" not in st.session_state:
-    st.session_state.profile_set = False
+# ---------------- CSS ----------------
+st.markdown("""
+<style>
+body { background-color: #0e0f14; }
+.main-title { font-size: 42px; font-weight: 800; color: #ffffff; }
+.sub-title { font-size: 20px; color: #cfcfcf; }
+.card { background: #171a23; border-radius: 18px; padding: 28px; color: #ffffff; box-shadow: 0 8px 25px rgba(0,0,0,0.4);}
+.section-title { font-size: 26px; font-weight: 700; color: #4da6ff; }
+.small-text { color: #dddddd; font-size: 16px; line-height: 1.6; }
+.footer-nav { position: fixed; bottom: 0; width: 100%; background: #171a23; padding: 12px; text-align: center; color: #aaaaaa; font-size: 14px; border-top: 1px solid #2b2f3a;}
+</style>
+""", unsafe_allow_html=True)
 
-if "profile" not in st.session_state:
-    st.session_state.profile = {
-        "name": "",
-        "email": "",
-        "gender": "",
-        "bio": "",
-        "image_url": ""
-    }
+# ---------------- SESSION DEFAULTS ----------------
+defaults = {
+    "profile_created": False, "user_name": "", "user_email": "", "user_brand": "",
+    "slogan": "", "script": "", "audio": None, "human_img": None, "product_img": None,
+    "review_rating": 5, "review_text": "", "video_resolution": "720p", "voice_style": "Female", "script_style": "Corporate"
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-if "ads" not in st.session_state:
-    st.session_state.ads = []
+# ---------------- UTILS ----------------
+def load_image(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content))
 
-if "reviews" not in st.session_state:
-    st.session_state.reviews = []
+def generate_with_llama(prompt):
+    if "slogan" in prompt.lower():
+        return "Unleash Energy. Unstoppable You."
+    elif "script" in prompt.lower():
+        style = st.session_state.script_style
+        if style == "Funny":
+            return "RedBull gives wings… and laughs! Fly through your day with energy and fun."
+        elif style == "Dramatic":
+            return "RedBull empowers you to conquer the impossible. Every sip, a surge of power."
+        return "Introducing RedBull — the energy that keeps you moving. Chase dreams, break limits, fuel ambition."
+    return "Your brand. Your power. Your moment."
 
-# ---------------- PROFILE CREDENTIALS -----------------
-if not st.session_state.profile_set:
-    st.title("Welcome to AdForge AI Studio 🤖")
-    st.subheader("Enter your profile details to continue")
+def generate_voiceover(text):
+    lang = "en"
+    if st.session_state.voice_style == "Male":
+        lang = "en-us"
+    tts = gTTS(text=text, lang=lang)
+    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    tts.save(temp_audio.name)
+    return temp_audio.name
 
-    st.session_state.profile["name"] = st.text_input("Full Name")
-    st.session_state.profile["email"] = st.text_input("Email Address")
-    st.session_state.profile["gender"] = st.selectbox("Gender", ["Male", "Female", "Other"])
-    st.session_state.profile["bio"] = st.text_area("Bio / About You", max_chars=150)
-    st.session_state.profile["image_url"] = st.text_input("Profile Image URL", "https://i.postimg.cc/3rz01J48/Screenshot-2026-01-23-021409.png")
+def generate_billboard(product, slogan, human_img=None, product_img=None):
+    bg = Image.new("RGB", (1280, 720), (20, 20, 30))
+    draw = ImageDraw.Draw(bg)
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 70)
+        font_slogan = ImageFont.truetype("DejaVuSans.ttf", 42)
+    except:
+        font_title = ImageFont.load_default()
+        font_slogan = ImageFont.load_default()
+    draw.text((60, 60), product.upper(), fill=(255,255,255), font=font_title)
+    draw.text((60, 160), slogan, fill=(200,200,255), font=font_slogan)
 
-    if st.button("Save & Continue"):
-        if st.session_state.profile["name"] and st.session_state.profile["email"]:
-            st.session_state.profile_set = True
-            st.experimental_rerun()
+    if human_img:
+        human = Image.open(human_img).convert("RGB").resize((360,500))  # RGB fix
+        bg.paste(human, (860,170))
+
+    if product_img:
+        prod = Image.open(product_img).convert("RGB").resize((280,280))  # RGB fix
+        bg.paste(prod, (60,380))
+
+    draw.text((60, 660), "AdForge AI Studio", fill=(140,140,180), font=font_slogan)
+    temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    bg.save(temp_img.name)
+    return temp_img.name
+
+def generate_animated_human(human_img_path, audio_path):
+    API_KEY = st.secrets["did_api_key"]
+    url = "https://api.d-id.com/talks"
+    with open(human_img_path, "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode("utf-8")
+    with open(audio_path, "rb") as f:
+        audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+    payload = {"source_image": img_b64, "driver_audio": audio_b64, "config":{"fluent":True,"expression":"neutral"}}
+    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type":"application/json"}
+    resp = requests.post(url, json=payload, headers=headers).json()
+    if "result_url" in resp:
+        data = requests.get(resp["result_url"]).content
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        tmp.write(data)
+        return tmp.name
+    st.error(f"D-ID API Error: {resp}")
+    return None
+
+def add_product_overlay(talking_video_path, product_img_path, slogan):
+    video_clip = VideoFileClip(talking_video_path)
+    product_clip = ImageClip(product_img_path).set_duration(video_clip.duration).resize(height=200).set_position(("right","bottom"))
+    text_clip = TextClip(slogan, fontsize=50, color='white').set_duration(video_clip.duration).set_position(("left","top"))
+    final = CompositeVideoClip([video_clip, product_clip, text_clip])
+    tmp_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    final.write_videofile(tmp_final.name, fps=24)
+    return tmp_final.name
+
+# ---------------- PROFILE CREATION ----------------
+if not st.session_state.profile_created:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">👤 Create Your Profile</div>', unsafe_allow_html=True)
+    name = st.text_input("Name")
+    email = st.text_input("Email")
+    brand = st.text_input("Company / Brand Name")
+    if st.button("✅ Create Profile"):
+        if not name or not email or not brand:
+            st.error("Please fill all fields.")
         else:
-            st.error("Please fill at least Name and Email to continue.")
+            st.session_state.profile_created = True
+            st.session_state.user_name = name
+            st.session_state.user_email = email
+            st.session_state.user_brand = brand
+            st.success(f"Welcome, {name}! You can now create ads.")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
 
-# ---------------- MAIN APP -----------------
-else:
-    # Sidebar with profile info
-    with st.sidebar:
-        st.image(st.session_state.profile["image_url"], width=150)
-        st.write(f"**{st.session_state.profile['name']}**")
-        st.write(st.session_state.profile["email"])
-        st.write(st.session_state.profile["gender"])
-        st.write(st.session_state.profile["bio"])
-        st.markdown("---")
-        st.write("### Share your Ad Studio")
-        st.markdown(
-            "[Instagram](https://instagram.com) | [WhatsApp](https://web.whatsapp.com/) | [Twitter](https://twitter.com)"
-        )
+# ---------------- SIDEBAR ----------------
+st.sidebar.markdown(f"👋 Hello, {st.session_state.user_name}!")
+st.sidebar.markdown("---")
+menu = st.sidebar.radio("📌 Navigation", ["Home","Ad Studio","Settings","License"])
 
-    # Tabs
-    tabs = st.tabs(["Home", "Create Ad", "Profile", "Reviews"])
+# ---------------- HOME ----------------
+if menu=="Home":
+    col1, col2 = st.columns([1,4])
+    with col1:
+        small_banner = load_image("https://i.postimg.cc/CLnTFRX1/Screenshot-2026-01-22-232250.png")
+        st.image(small_banner, width=170)
+    with col2:
+        st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-title">Turn your ideas into cinematic AI ads.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🚀 About</div>', unsafe_allow_html=True)
+    st.markdown("<div class='small-text'>AdForge AI Studio auto-generates professional ad creatives using AI. Upload a human image, product image, and generate scripts, voiceovers, and videos.</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------- HOME -----------------
-    with tabs[0]:
-        st.header("Welcome to AdForge AI Studio 🤖")
-        st.markdown(
-            """
-            Create professional product ads in minutes.
-            
-            **Features:**
-            - Product image to video with animated captions
-            - Voiceover narration using your slogan
-            - Emoji animations
-            - Download & share videos
-            """
-        )
-        st.markdown("---")
-        st.write("Your Previous Ads:")
-        for idx, ad in enumerate(st.session_state.ads):
-            st.write(f"**Ad {idx+1}:** {ad['product']} - {ad['slogan']}")
-            st.video(ad['video_path'])
+# ---------------- AD STUDIO ----------------
+elif menu=="Ad Studio":
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🎬 Ad Studio</div>', unsafe_allow_html=True)
 
-    # ---------------- CREATE AD -----------------
-    with tabs[1]:
-        st.header("🛒 Create Your Ad")
-        product_name = st.text_input("Product / Topic")
-        slogan_text = st.text_area("Slogan / Caption (max 7 lines)", height=120)
-        product_img_file = st.file_uploader("Upload Product Image", type=["png", "jpg", "jpeg"])
-        generate_btn = st.button("Generate Video 🎬")
+    product = st.text_input("Product / Topic")
+    if st.button("✨ Generate Slogan + Script (AI)"):
+        if not product: st.error("Enter a product.")
+        else:
+            st.session_state.slogan = generate_with_llama(f"slogan for {product}")
+            st.session_state.script = generate_with_llama(f"script for {product}")
+            st.success("AI slogan and script generated!")
 
-        if generate_btn:
-            if not product_name or not slogan_text or not product_img_file:
-                st.error("Fill all fields and upload product image!")
-            else:
-                # Save product image
-                product_img = Image.open(product_img_file).convert("RGBA")
-                temp_img_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-                product_img.save(temp_img_file.name)
+    st.text_input("AI Slogan", value=st.session_state.slogan or "")
+    script = st.text_area("AI Script", value=st.session_state.script or "", height=120)
 
-                # Voiceover using gTTS
-                tts = gTTS(text=slogan_text, lang="en")
-                temp_audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                tts.save(temp_audio_file.name)
+    st.markdown("### 🧑 Upload Human Image")
+    human = st.file_uploader("Human Image", type=["png","jpg","jpeg"])
+    if human: st.session_state.human_img = human
 
-                # Animated text frames
-                frames = []
-                for i in range(30):  # 3 seconds, 10 fps
-                    frame = product_img.copy()
-                    draw = ImageDraw.Draw(frame)
-                    font = ImageFont.load_default()
-                    text_y = 10 + i*2
-                    draw.text((10, text_y), slogan_text + " 🚀🎉", font=font, fill="white")
-                    frames.append(frame)
+    st.markdown("### 🥤 Upload Product Image")
+    prod = st.file_uploader("Product Image", type=["png","jpg","jpeg"])
+    if prod: st.session_state.product_img = prod
 
-                # MoviePy video
-                clips = [ImageClip(frame).set_duration(0.1) for frame in frames]
-                video_clip = CompositeVideoClip(clips)
-                audio_clip = AudioFileClip(temp_audio_file.name)
-                video_clip = video_clip.set_audio(audio_clip)
+    if st.button("🔊 Generate Voiceover"):
+        if not script: st.error("Generate script first.")
+        else:
+            st.session_state.audio = generate_voiceover(script)
+            st.audio(st.session_state.audio)
+            st.success("Voiceover ready!")
 
-                temp_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                video_clip.write_videofile(temp_final.name, fps=10, codec="libx264", audio_codec="aac")
+    if st.button("🎥 Generate Animated AI Video"):
+        if not product or not st.session_state.audio or not st.session_state.human_img:
+            st.error("Missing required inputs.")
+        else:
+            talking_video = generate_animated_human(st.session_state.human_img.name, st.session_state.audio)
+            if talking_video:
+                final_video = add_product_overlay(talking_video, st.session_state.product_img.name, st.session_state.slogan)
+                st.video(final_video)
+                st.success("Animated AI ad generated!")
 
-                # Save ad info
-                st.session_state.ads.append({
-                    "product": product_name,
-                    "slogan": slogan_text,
-                    "video_path": temp_final.name
-                })
+                # ---------------- REVIEW ----------------
+                st.markdown("### ⭐ Rate Your Experience")
+                rating = st.slider("Rate the App", min_value=1, max_value=5, value=5)
+                review = st.text_area("Feedback")
+                if st.button("Submit Review"):
+                    st.session_state.review_rating = rating
+                    st.session_state.review_text = review
+                    st.success("Thanks for your feedback! 🌟")
 
-                st.success("🎉 Video Generated!")
-                st.video(temp_final.name)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------- PROFILE -----------------
-    with tabs[2]:
-        st.header("Edit Profile")
-        st.session_state.profile["name"] = st.text_input("Name", st.session_state.profile["name"])
-        st.session_state.profile["email"] = st.text_input("Email", st.session_state.profile["email"])
-        st.session_state.profile["gender"] = st.selectbox("Gender", ["Male", "Female", "Other"], index=0)
-        st.session_state.profile["bio"] = st.text_area("Bio", st.session_state.profile["bio"])
-        st.session_state.profile["image_url"] = st.text_input("Profile Image URL", st.session_state.profile["image_url"])
-        st.button("Save Profile")
+# ---------------- SETTINGS ----------------
+elif menu=="Settings":
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
+    st.session_state.video_resolution = st.selectbox("Video Resolution", ["480p","720p","1080p"], index=1)
+    st.session_state.voice_style = st.selectbox("Voice Style", ["Female","Male"], index=0)
+    st.session_state.script_style = st.selectbox("Script Style", ["Corporate","Funny","Dramatic"], index=0)
+    st.session_state.add_bgm = st.checkbox("Add Background Music", value=False)
+    st.markdown("<div class='small-text'>Settings will be applied to generated ads.</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---------------- REVIEWS -----------------
-    with tabs[3]:
-        st.header("Ratings & Reviews ⭐")
-        rating = st.slider("Your Rating", 1, 5, 5)
-        review_text = st.text_area("Write a review")
-        if st.button("Submit Review"):
-            st.session_state.reviews.append({"rating": rating, "review": review_text})
-            st.success("Review submitted!")
-        st.write("### All Reviews")
-        for rev in st.session_state.reviews:
-            st.write(f"⭐ {rev['rating']} - {rev['review']}")
+# ---------------- LICENSE ----------------
+elif menu=="License":
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📜 License & Info</div>', unsafe_allow_html=True)
+    st.markdown(f"<div class='small-text'>AdForge AI Studio – Community Edition © 2026<br>User: {st.session_state.user_name}<br>Email: {st.session_state.user_email}<br>Brand: {st.session_state.user_brand}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- FOOTER ----------------
+st.markdown('<div class="footer-nav">🏠 Home | 🎬 Studio | ⚙ Settings | 📜 License</div>', unsafe_allow_html=True)
