@@ -3,6 +3,7 @@ from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextCli
 from gtts import gTTS
 import tempfile
 from PIL import Image
+import random
 
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wide")
@@ -29,7 +30,7 @@ body { background-color: #0e0f14; }
 # ---------------- SESSION STATE ----------------
 defaults = {
     "profile_created": False, "user_name": "", "user_email": "", "user_brand": "", "user_gender": "Male",
-    "ads_history": []
+    "ads_history": [], "slogan": "", "text_overlay": "", "audio": None
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -50,12 +51,16 @@ def generate_voiceover(text):
     return temp_audio.name
 
 def generate_product_video(product_img_path, text_overlay, audio_path=None):
-    # If no image, use a colored placeholder
+    # Placeholder if no image
     if product_img_path:
-        clip = ImageClip(product_img_path).set_duration(5)
+        clip = ImageClip(product_img_path).set_duration(6)
     else:
-        clip = ColorClip(size=(480,360), color=(50,50,150)).set_duration(5)
-    txt_clip = TextClip(text_overlay or "Your Product Here", fontsize=40, color="white").set_position("center").set_duration(5)
+        clip = ColorClip(size=(480,360), color=(50,50,150)).set_duration(6)
+
+    # Create moving text CC-style
+    txt_clip = TextClip(text_overlay or "Your Product Here", fontsize=35, color="white", method="caption", size=(480,None))
+    txt_clip = txt_clip.set_position(lambda t: ('center', 50 + int(30*t))).set_duration(6)
+
     final = CompositeVideoClip([clip, txt_clip])
     temp_vid = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final.write_videofile(temp_vid.name, fps=24, codec="libx264", audio_codec="aac", ffmpeg_params=["-pix_fmt","yuv420p"])
@@ -106,7 +111,8 @@ if menu=="Home":
     <li>Add animated captions & emojis</li>
     <li>Generate voiceover for your text</li>
     <li>View past ads & ratings</li>
-    <li>Share ads to Instagram, WhatsApp, Telegram, LinkedIn</li>
+    <li>Edit profile anytime</li>
+    <li>Download & share your ads</li>
     </ul>
     """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -115,11 +121,24 @@ if menu=="Home":
 elif menu=="Ad Studio":
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🎬 Ad Studio</div>', unsafe_allow_html=True)
+    
     product_name = st.text_input("🛒 Product / Topic")
-    slogan = st.text_input("💡 Slogan / Caption")
-    text_overlay = st.text_area("📝 Video Text / Emojis", height=120)
+    slogan = st.text_input("💡 Slogan / Caption", value=st.session_state.get("slogan", ""))
+    text_overlay = st.text_area("📝 Video Text / Emojis", height=120, value=st.session_state.get("text_overlay",""))
     product_file = st.file_uploader("📦 Product Image", type=["png","jpg","jpeg"])
 
+    # ---- Generate Slogan + Text ----
+    if st.button("✨ Generate Slogan + Text (AI)"):
+        if not product_name:
+            st.error("Enter a product name first!")
+        else:
+            st.session_state.slogan = f"{product_name} — Boost Your Day!"
+            st.session_state.text_overlay = f"Try {product_name} today! 💪⚡🎉"
+            st.success("Slogan and text generated!")
+            slogan = st.session_state.slogan
+            text_overlay = st.session_state.text_overlay
+
+    # ---- Generate Voiceover ----
     if st.button("🔊 Generate Voiceover"):
         if not text_overlay:
             st.error("Enter text for voiceover.")
@@ -128,6 +147,7 @@ elif menu=="Ad Studio":
             st.audio(st.session_state.audio)
             st.success("Voiceover ready!")
 
+    # ---- Generate Animated Product Video ----
     if st.button("🎥 Generate Animated Product Video"):
         product_path = save_uploaded_file(product_file) if product_file else None
         video_path = generate_product_video(product_path, text_overlay or "Your Product Here", getattr(st.session_state,"audio",None))
@@ -136,7 +156,9 @@ elif menu=="Ad Studio":
             "product": product_name or "Sample Product",
             "slogan": slogan or "Sample Slogan",
             "text": text_overlay or "Your Text",
-            "video": video_path
+            "video": video_path,
+            "rating": None,
+            "review": None
         })
         st.success("Animated product video generated!")
         st.markdown("""
@@ -159,6 +181,41 @@ elif menu=="My Ads":
             st.markdown(f"**{idx}. {ad['product']}** - {ad['slogan']}")
             st.video(ad['video'])
             st.markdown(f"**Text Overlay:** {ad['text']}")
+            # Rating
+            rating = st.slider(f"⭐ Rate Ad {idx}", 1,5,value=ad.get("rating") or 5, key=f"rate_{idx}")
+            review = st.text_area(f"💬 Review Ad {idx}", value=ad.get("review") or "", key=f"rev_{idx}")
+            ad["rating"] = rating
+            ad["review"] = review
+            # Download button
+            with open(ad["video"], "rb") as f:
+                st.download_button(f"⬇ Download Ad {idx}", f, file_name=f"{ad['product']}.mp4")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- PROFILE ----------------
+elif menu=="Profile":
+    st.markdown('<div class="card"><div class="section-title">👤 Edit Profile</div>', unsafe_allow_html=True)
+    name = st.text_input("📝 Name", value=st.session_state.user_name)
+    email = st.text_input("📧 Email", value=st.session_state.user_email)
+    brand = st.text_input("🏢 Company / Brand Name", value=st.session_state.user_brand)
+    gender = st.radio("⚧ Gender", ["Male","Female"], index=0 if st.session_state.user_gender=="Male" else 1)
+    if st.button("💾 Save Profile"):
+        st.session_state.user_name = name
+        st.session_state.user_email = email
+        st.session_state.user_brand = brand
+        st.session_state.user_gender = gender
+        st.success("Profile updated successfully!")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- SETTINGS ----------------
+elif menu=="Settings":
+    st.markdown('<div class="card"><div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
+    st.markdown("Currently all app settings are auto-handled. Future options can include BGM, font styles, video resolution, etc.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- LICENSE ----------------
+elif menu=="License":
+    st.markdown('<div class="card"><div class="section-title">📜 License & Info</div>', unsafe_allow_html=True)
+    st.markdown(f"<div class='small-text'>AdForge AI Studio – Hackathon Edition © 2026<br>User: {st.session_state.user_name}<br>Email: {st.session_state.user_email}<br>Brand: {st.session_state.user_brand}</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------- FOOTER ----------------
