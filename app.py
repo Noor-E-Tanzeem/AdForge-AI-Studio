@@ -39,15 +39,26 @@ except Exception as e:
 
 def generate_script(topic):
     prompt = f"Write a short, engaging 30-second ad script for {topic}. Keep it under 100 words."
-    try:
-        response = groq_client.chat.completions.create(
-            model="llama3-70b-8192",   # 🔥 FIXED MODEL (not deprecated)
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=150
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        raise Exception(f"Groq API error: {e}")
+
+    models = [
+        "llama-3.1-8b-instant",
+        "mixtral-8x7b-32768"
+    ]
+
+    last_error = None
+
+    for model in models:
+        try:
+            response = groq_client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=150
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            last_error = e
+
+    raise Exception(f"Groq API error (all models failed): {last_error}")
 
 
 def generate_voiceover(text, voice_id):
@@ -150,11 +161,16 @@ if st.button("Generate Script"):
 # Step 2: Voiceover MP3
 st.header("2️⃣ Voiceover Generator")
 
-if "script" in st.session_state:
+if "script" not in st.session_state:
+    st.info("Generate a script first to enable voiceover.")
+else:
     if st.button("Generate Voiceover MP3"):
         with st.spinner("Generating voiceover..."):
             try:
-                audio_path = generate_voiceover(st.session_state.script, ELEVENLABS_VOICE_ID)
+                audio_path = generate_voiceover(
+                    st.session_state.script,
+                    ELEVENLABS_VOICE_ID
+                )
                 st.session_state.audio_path = audio_path
                 st.success("Voiceover generated!")
                 st.audio(audio_path, format="audio/mp3")
@@ -190,7 +206,9 @@ if uploaded_image and st.button("Edit Image"):
 # Step 4: Slideshow Video
 st.header("4️⃣ Slideshow Video")
 
-if "audio_path" in st.session_state and "edited_image_path" in st.session_state:
+if "audio_path" not in st.session_state or "edited_image_path" not in st.session_state:
+    st.info("Generate voiceover and edit an image first to enable slideshow.")
+else:
     if st.button("Create Slideshow Video"):
         with st.spinner("Creating video..."):
             try:
@@ -198,6 +216,7 @@ if "audio_path" in st.session_state and "edited_image_path" in st.session_state:
                     st.session_state.edited_image_path,
                     st.session_state.audio_path
                 )
+                st.session_state.video_path = video_path
                 st.success("Video created!")
                 st.video(video_path)
 
@@ -224,4 +243,5 @@ def cleanup_file(key):
 if st.button("🧹 Clear Generated Files"):
     cleanup_file("audio_path")
     cleanup_file("edited_image_path")
+    cleanup_file("video_path")
     st.success("Temporary files cleared!")
