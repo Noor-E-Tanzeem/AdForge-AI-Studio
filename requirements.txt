@@ -6,3 +6,4 @@ rembg
 requests
 numpy
 opencv-python-headless
+onnxruntime
