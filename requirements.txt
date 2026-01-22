@@ -1,7 +1,7 @@
 streamlit
-Pillow
 numpy
-opencv-python
-gTTS
+Pillow
 pydub
+gTTS
+opencv-python-headless
 ffmpeg-python
