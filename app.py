@@ -3,7 +3,7 @@ from moviepy.editor import ImageClip, AudioFileClip
 from gtts import gTTS
 import tempfile
 import requests
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 
 # ---------------- CONFIG ----------------
@@ -77,9 +77,6 @@ def load_image(url):
 
 # ---------------- LLaMA PLACEHOLDER ----------------
 def generate_with_llama(prompt):
-    """
-    Replace with real LLaMA / Ollama / Groq API later
-    """
     if "slogan" in prompt.lower():
         return "Unleash Energy. Unstoppable You."
     elif "script" in prompt.lower():
@@ -98,12 +95,32 @@ def generate_voiceover(text):
     tts.save(temp_audio.name)
     return temp_audio.name
 
+# ---------------- BILLBOARD ----------------
+def generate_billboard(product, slogan):
+    img = Image.new("RGB", (1280, 720), (20, 20, 30))
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 80)
+        font_slogan = ImageFont.truetype("DejaVuSans.ttf", 50)
+    except:
+        font_title = ImageFont.load_default()
+        font_slogan = ImageFont.load_default()
+
+    draw.text((60, 80), product.upper(), fill=(255, 255, 255), font=font_title)
+    draw.text((60, 220), slogan, fill=(200, 200, 255), font=font_slogan)
+    draw.text((60, 620), "AdForge AI Studio", fill=(120, 120, 160), font=font_slogan)
+
+    temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    img.save(temp_img.name)
+    return temp_img.name
+
 # ---------------- VIDEO ----------------
 def create_video(billboard_img, audio_path):
     img_clip = ImageClip(billboard_img).set_duration(8)
 
     def zoom(t):
-        return 1 + 0.04 * t
+        return 1 + 0.03 * t
 
     img_clip = img_clip.resize(zoom)
 
@@ -139,14 +156,14 @@ if menu == "Home":
     with col1:
         try:
             banner = load_image("https://i.postimg.cc/Dwg8cpgg/Screenshot-2026-01-22-234840.png")
-            st.image(banner, width=180)
+            st.image(banner, width=160)
         except:
             st.write("")
 
     with col2:
         st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="sub-title">AI ads powered by LLaMA — slogans, scripts, voiceovers & billboard videos.</div>',
+            '<div class="sub-title">Create cinematic AI advertisements in one click.</div>',
             unsafe_allow_html=True
         )
 
@@ -157,8 +174,8 @@ if menu == "Home":
         st.markdown('<div class="section-title">What is AdForge?</div>', unsafe_allow_html=True)
         st.markdown(
             "<div class='small-text'>"
-            "AdForge AI Studio creates cinematic ads automatically. "
-            "Just enter a product and get a slogan, script, voiceover, and billboard-style ad video."
+            "AdForge AI Studio creates professional advertisements automatically. "
+            "Enter a product name and get a slogan, script, voiceover and billboard-style ad video."
             "</div>",
             unsafe_allow_html=True
         )
@@ -171,8 +188,9 @@ if menu == "Home":
             "• LLaMA-powered slogan generator<br>"
             "• LLaMA-powered ad scripts<br>"
             "• AI voiceover (no uploads)<br>"
-            "• Billboard-style visuals<br>"
-            "• Animated ad videos"
+            "• Auto-generated billboard visuals<br>"
+            "• AI video ads<br>"
+            "• Human talking ads (coming soon)"
             "</div>",
             unsafe_allow_html=True
         )
@@ -194,12 +212,13 @@ elif menu == "Ad Studio":
 
     product = st.text_input("Enter Product / Topic")
 
-    if st.button("✨ Generate Slogan + Script (LLaMA)"):
+    if st.button("✨ Generate Slogan + Script (AI)"):
         if not product:
             st.error("Enter a product or topic.")
         else:
             st.session_state.slogan = generate_with_llama(f"Generate a catchy slogan for {product}")
             st.session_state.script = generate_with_llama(f"Generate a full ad script for {product}")
+            st.success("AI slogan and script generated!")
 
     slogan = st.text_input("AI Slogan", value=st.session_state.slogan)
     script = st.text_area("AI Ad Script", value=st.session_state.script, height=140)
@@ -212,18 +231,14 @@ elif menu == "Ad Studio":
             st.success("Voiceover generated!")
             st.audio(st.session_state.audio)
 
-    billboard_url = st.text_input("Billboard Image URL")
-
-    if st.button("🎥 Create AI Video"):
-        if not billboard_url or not st.session_state.audio:
-            st.error("Provide a billboard image URL and generate voiceover.")
+    if st.button("🎥 Generate Billboard + AI Video"):
+        if not product or not st.session_state.slogan or not st.session_state.audio:
+            st.error("Generate slogan, script and voiceover first.")
         else:
-            billboard_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-            img = load_image(billboard_url)
-            img.save(billboard_img.name)
+            billboard = generate_billboard(product, st.session_state.slogan)
+            video = create_video(billboard, st.session_state.audio)
 
-            video = create_video(billboard_img.name, st.session_state.audio)
-            st.success("Your ad video is ready!")
+            st.success("Your AI ad video is ready!")
             st.video(video)
 
     st.markdown("</div>", unsafe_allow_html=True)
