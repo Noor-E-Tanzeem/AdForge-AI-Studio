@@ -1,9 +1,9 @@
 import streamlit as st
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip, ColorClip
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip, ColorClip, AudioFileClip
 from gtts import gTTS
 import tempfile
 from PIL import Image
-import random
+import os
 
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wide")
@@ -18,19 +18,23 @@ body { background-color: #0e0f14; }
 .section-title { font-size: 24px; font-weight: 700; color: #4da6ff; margin-bottom:10px;}
 .small-text { color: #dddddd; font-size: 14px; line-height: 1.4; }
 .footer-nav { position: fixed; bottom: 0; width: 100%; background: #171a23; padding: 10px; text-align: center; color: #aaaaaa; font-size: 14px; border-top: 1px solid #2b2f3a;}
-.profile-top {position: fixed; top: 10px; right: 20px; width: 130px; text-align:center; z-index:999;}
-.profile-top img {border-radius:50%; width:130px; height:130px;}
+.profile-top {position: fixed; top: 10px; right: 20px; width: 120px; text-align:center; z-index:999;}
+.profile-top img {border-radius:50%; width:120px; height:120px;}
 .share-buttons a {margin-right: 5px; text-decoration:none; color:white; background-color:#4da6ff; padding:4px 8px; border-radius:6px; font-size:14px;}
-.ad-grid {display:grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); grid-gap:10px;}
-.ad-card {background:#222431; border-radius:12px; padding:10px; text-align:center;}
-.ad-card video {width:100%; height:auto; border-radius:10px;}
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- SESSION STATE ----------------
 defaults = {
-    "profile_created": False, "user_name": "", "user_email": "", "user_brand": "", "user_gender": "Male",
-    "ads_history": [], "slogan": "", "text_overlay": "", "audio": None
+    "profile_created": False,
+    "user_name": "",
+    "user_email": "",
+    "user_brand": "",
+    "user_gender": "Male",
+    "ads_history": [],
+    "slogan": "",
+    "text_overlay": "",
+    "audio": None
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -51,24 +55,33 @@ def generate_voiceover(text):
     return temp_audio.name
 
 def generate_product_video(product_img_path, text_overlay, audio_path=None):
-    # Placeholder if no image
+    # Placeholder background if no image
     if product_img_path:
-        clip = ImageClip(product_img_path).set_duration(6)
+        clip = ImageClip(product_img_path).set_duration(8).resize(height=360)
     else:
-        clip = ColorClip(size=(480,360), color=(50,50,150)).set_duration(6)
+        clip = ColorClip(size=(480,360), color=(50,50,150)).set_duration(8)
 
-    # Create moving text CC-style
-    txt_clip = TextClip(text_overlay or "Your Product Here", fontsize=35, color="white", method="caption", size=(480,None))
-    txt_clip = txt_clip.set_position(lambda t: ('center', 50 + int(30*t))).set_duration(6)
+    # Moving text with emojis (scroll up)
+    txt_clip = TextClip(text_overlay or "Your Product Here 🚀🎉", fontsize=28, color="white", method="caption", size=(480,None))
+    txt_clip = txt_clip.set_position(lambda t: ('center', 360 - 50*t)).set_duration(8)
 
-    final = CompositeVideoClip([clip, txt_clip])
+    clips = [clip, txt_clip]
+
+    # Add audio if exists
+    if audio_path and os.path.exists(audio_path):
+        audio_clip = AudioFileClip(audio_path).subclip(0,8)
+        final = CompositeVideoClip(clips).set_audio(audio_clip)
+    else:
+        final = CompositeVideoClip(clips)
+
     temp_vid = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final.write_videofile(temp_vid.name, fps=24, codec="libx264", audio_codec="aac", ffmpeg_params=["-pix_fmt","yuv420p"])
     return temp_vid.name
 
 # ---------------- PROFILE CREATION ----------------
 if not st.session_state.profile_created:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="card" style="text-align:center;">', unsafe_allow_html=True)
+    st.image("https://i.postimg.cc/3rz01J48/Screenshot-2026-01-23-021409.png", width=150)
     st.markdown('<div class="section-title">👤 Create Your Profile</div>', unsafe_allow_html=True)
     name = st.text_input("📝 Name")
     email = st.text_input("📧 Email")
@@ -150,7 +163,7 @@ elif menu=="Ad Studio":
     # ---- Generate Animated Product Video ----
     if st.button("🎥 Generate Animated Product Video"):
         product_path = save_uploaded_file(product_file) if product_file else None
-        video_path = generate_product_video(product_path, text_overlay or "Your Product Here", getattr(st.session_state,"audio",None))
+        video_path = generate_product_video(product_path, text_overlay or "Your Product Here 🚀🎉", getattr(st.session_state,"audio",None))
         st.video(video_path)
         st.session_state.ads_history.append({
             "product": product_name or "Sample Product",
@@ -209,7 +222,7 @@ elif menu=="Profile":
 # ---------------- SETTINGS ----------------
 elif menu=="Settings":
     st.markdown('<div class="card"><div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
-    st.markdown("Currently all app settings are auto-handled. Future options can include BGM, font styles, video resolution, etc.")
+    st.markdown("All app settings are currently auto-handled. Future updates will include BGM, fonts, video resolution.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------- LICENSE ----------------
