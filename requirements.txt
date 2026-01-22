@@ -1,5 +1,7 @@
-streamlit==1.28.1
-gTTS==2.3.2
-moviepy==1.0.3
-Pillow==10.4.0
-rembg==2.0.52
+streamlit
+Pillow
+numpy
+opencv-python
+gTTS
+pydub
+ffmpeg-python
