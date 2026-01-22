@@ -1,7 +1,7 @@
 streamlit
 numpy
 Pillow
-pydub
 gTTS
 opencv-python-headless
 ffmpeg-python
+moviepy
