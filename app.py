@@ -1,10 +1,10 @@
 import streamlit as st
 from moviepy.editor import ImageClip, AudioFileClip
+from gtts import gTTS
 import tempfile
 import requests
 from PIL import Image
 from io import BytesIO
-import pyttsx3
 
 # ---------------- CONFIG ----------------
 st.set_page_config(
@@ -17,11 +17,11 @@ st.set_page_config(
 st.markdown("""
 <style>
 body {
-    background-color: #0f1117;
+    background-color: #111217;
 }
 
 .main-title {
-    font-size: 46px;
+    font-size: 42px;
     font-weight: 800;
     color: #ffffff;
 }
@@ -78,14 +78,14 @@ def load_image(url):
 # ---------------- LLaMA PLACEHOLDER ----------------
 def generate_with_llama(prompt):
     """
-    Replace this with real LLaMA / Ollama / Groq API later.
+    Replace with real LLaMA / Ollama / Groq API later
     """
     if "slogan" in prompt.lower():
         return "Unleash Energy. Unstoppable You."
     elif "script" in prompt.lower():
         return (
-            "Introducing RedBull – the energy that keeps you moving.\n"
-            "Whether you're chasing dreams or breaking limits,\n"
+            "Introducing RedBull – the energy that keeps you moving. "
+            "Whether you're chasing dreams or breaking limits, "
             "RedBull fuels your ambition. Grab one today and feel the power."
         )
     else:
@@ -93,10 +93,9 @@ def generate_with_llama(prompt):
 
 # ---------------- VOICEOVER ----------------
 def generate_voiceover(text):
-    engine = pyttsx3.init()
+    tts = gTTS(text=text, lang="en")
     temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    engine.save_to_file(text, temp_audio.name)
-    engine.runAndWait()
+    tts.save(temp_audio.name)
     return temp_audio.name
 
 # ---------------- VIDEO ----------------
@@ -140,14 +139,14 @@ if menu == "Home":
     with col1:
         try:
             banner = load_image("https://i.postimg.cc/Dwg8cpgg/Screenshot-2026-01-22-234840.png")
-            st.image(banner, width=200)
+            st.image(banner, width=180)
         except:
             st.write("")
 
     with col2:
         st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="sub-title">AI Ads powered by LLaMA — slogans, scripts, voiceovers & videos.</div>',
+            '<div class="sub-title">AI ads powered by LLaMA — slogans, scripts, voiceovers & billboard videos.</div>',
             unsafe_allow_html=True
         )
 
@@ -157,8 +156,10 @@ if menu == "Home":
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="section-title">What is AdForge?</div>', unsafe_allow_html=True)
         st.markdown(
-            "<div class='small-text'>AdForge AI Studio creates cinematic ads automatically using a LLaMA-style LLM. "
-            "Just enter a product and get a slogan, script, voiceover, and billboard video.</div>",
+            "<div class='small-text'>"
+            "AdForge AI Studio creates cinematic ads automatically. "
+            "Just enter a product and get a slogan, script, voiceover, and billboard-style ad video."
+            "</div>",
             unsafe_allow_html=True
         )
 
@@ -171,7 +172,6 @@ if menu == "Home":
             "• LLaMA-powered ad scripts<br>"
             "• AI voiceover (no uploads)<br>"
             "• Billboard-style visuals<br>"
-            "• Human talking ads (coming soon)<br>"
             "• Animated ad videos"
             "</div>",
             unsafe_allow_html=True
@@ -210,6 +210,7 @@ elif menu == "Ad Studio":
         else:
             st.session_state.audio = generate_voiceover(script)
             st.success("Voiceover generated!")
+            st.audio(st.session_state.audio)
 
     billboard_url = st.text_input("Billboard Image URL")
 
