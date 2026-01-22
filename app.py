@@ -14,7 +14,7 @@ try:
     GROQ_API_KEY = st.secrets["groq_api_key"]
     ELEVENLABS_API_KEY = st.secrets["elevenlabs_api_key"]
     ELEVENLABS_VOICE_ID = st.secrets["elevenlabs_voice_id"]
-except KeyError as e:
+except KeyError:
     st.error(
         "Missing secrets! Please add:\n"
         "- groq_api_key\n"
@@ -41,7 +41,7 @@ def generate_script(topic):
     prompt = f"Write a short, engaging 30-second ad script for {topic}. Keep it under 100 words."
     try:
         response = groq_client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama3-70b-8192",   # 🔥 FIXED MODEL (not deprecated)
             messages=[{"role": "user", "content": prompt}],
             max_tokens=150
         )
@@ -165,7 +165,7 @@ if "script" in st.session_state:
             except Exception as e:
                 st.error(str(e))
 
-# Step 3: Billboard PNG with Smart Photoshop
+# Step 3: Smart Billboard Editor
 st.header("3️⃣ Smart Billboard Editor")
 
 uploaded_image = st.file_uploader("Upload an image (PNG/JPG)", type=["png", "jpg", "jpeg"])
@@ -187,7 +187,7 @@ if uploaded_image and st.button("Edit Image"):
         except Exception as e:
             st.error(str(e))
 
-# Step 4: Simple Slideshow Video
+# Step 4: Slideshow Video
 st.header("4️⃣ Slideshow Video")
 
 if "audio_path" in st.session_state and "edited_image_path" in st.session_state:
