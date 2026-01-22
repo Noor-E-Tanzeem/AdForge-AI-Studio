@@ -7,10 +7,14 @@ from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 import tempfile
 import os
 
-# Access secrets
-GROQ_API_KEY = st.secrets["groq_api_key"]
-ELEVENLABS_API_KEY = st.secrets["elevenlabs_api_key"]
-ELEVENLABS_VOICE_ID = st.secrets["elevenlabs_voice_id"]
+# Access secrets with error handling (to avoid crashes if not set during deployment)
+try:
+    GROQ_API_KEY = st.secrets["groq_api_key"]
+    ELEVENLABS_API_KEY = st.secrets["elevenlabs_api_key"]
+    ELEVENLABS_VOICE_ID = st.secrets["elevenlabs_voice_id"]
+except KeyError as e:
+    st.error(f"Missing secret: {e}. Please set up secrets in Streamlit Cloud.")
+    st.stop()
 
 # Initialize Groq client
 groq_client = Groq(api_key=GROQ_API_KEY)
