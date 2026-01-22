@@ -49,11 +49,11 @@ def generate_script(topic):
     raise Exception(f"Groq API error (all models failed): {last_error}")
 
 # ---------------------------
-# Google TTS Voiceover
+# Google TTS Voiceover (free)
 # ---------------------------
-def generate_voiceover(text, voice_id=None):
+def generate_voiceover(text):
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    tts = gTTS(text=text, lang='en')
+    tts = gTTS(text=text, lang='en')  # lang='en' for English
     tts.save(temp_file.name)
     temp_file.close()
     return temp_file.name
