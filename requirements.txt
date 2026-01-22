@@ -1,11 +1,7 @@
 streamlit
-moviepy==1.0.3
+moviepy
+gtts
+requests
+pillow
 imageio
 imageio-ffmpeg
-numpy
-decorator
-tqdm
-proglog
-gTTS
-requests
-Pillow
