@@ -1,5 +1,5 @@
 import streamlit as st
-from moviepy.editor import ImageClip, AudioFileClip
+from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
 from gtts import gTTS
 import tempfile
 import requests
@@ -13,12 +13,14 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------------- ASSET URLS (YOURS) ----------------
+BANNER_URL = "https://i.postimg.cc/CLnTFRX1/Screenshot-2026-01-22-232250.png"
+SIDE_IMAGE_URL = "https://i.postimg.cc/Dwg8cpgg/Screenshot-2026-01-22-234840.png"
+
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
-body {
-    background-color: #111217;
-}
+body { background-color: #111217; }
 
 .main-title {
     font-size: 42px;
@@ -65,15 +67,12 @@ body {
 """, unsafe_allow_html=True)
 
 # ---------------- NAV ----------------
-menu = st.sidebar.radio(
-    "📌 Navigation",
-    ["Home", "Ad Studio", "Settings", "License"]
-)
+menu = st.sidebar.radio("📌 Navigation", ["Home", "Ad Studio", "Settings", "License"])
 
 # ---------------- UTILS ----------------
 def load_image(url):
     response = requests.get(url)
-    return Image.open(BytesIO(response.content))
+    return Image.open(BytesIO(response.content)).convert("RGBA")
 
 # ---------------- LLaMA PLACEHOLDER ----------------
 def generate_with_llama(prompt):
@@ -115,21 +114,24 @@ def generate_billboard(product, slogan):
     img.save(temp_img.name)
     return temp_img.name
 
-# ---------------- VIDEO ----------------
-def create_video(billboard_img, audio_path):
-    img_clip = ImageClip(billboard_img).set_duration(8)
-
-    def zoom(t):
-        return 1 + 0.03 * t
-
-    img_clip = img_clip.resize(zoom)
+# ---------------- VIDEO (BILLBOARD + HUMAN + PRODUCT) ----------------
+def create_ad_video(billboard_img, human_img, product_img, audio_path):
+    billboard = ImageClip(billboard_img).set_duration(8)
+    human = ImageClip(human_img).resize(height=480).set_position(("left", "bottom")).set_duration(8)
+    product = ImageClip(product_img).resize(height=420).set_position(("right", "bottom")).set_duration(8)
 
     audio = AudioFileClip(audio_path)
-    img_clip = img_clip.set_duration(audio.duration)
-    img_clip = img_clip.set_audio(audio)
+    duration = audio.duration
+
+    billboard = billboard.set_duration(duration)
+    human = human.set_duration(duration)
+    product = product.set_duration(duration)
+
+    composite = CompositeVideoClip([billboard, human, product])
+    composite = composite.set_audio(audio)
 
     temp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    img_clip.write_videofile(
+    composite.write_videofile(
         temp.name,
         fps=24,
         codec="libx264",
@@ -141,12 +143,9 @@ def create_video(billboard_img, audio_path):
     return temp.name
 
 # ---------------- SESSION ----------------
-if "slogan" not in st.session_state:
-    st.session_state.slogan = ""
-if "script" not in st.session_state:
-    st.session_state.script = ""
-if "audio" not in st.session_state:
-    st.session_state.audio = None
+for k in ["slogan", "script", "audio"]:
+    if k not in st.session_state:
+        st.session_state[k] = None
 
 # ---------------- HOME ----------------
 if menu == "Home":
@@ -154,52 +153,23 @@ if menu == "Home":
     col1, col2 = st.columns([1, 3])
 
     with col1:
-        try:
-            banner = load_image("https://i.postimg.cc/Dwg8cpgg/Screenshot-2026-01-22-234840.png")
-            st.image(banner, width=160)
-        except:
-            st.write("")
+        banner = load_image(SIDE_IMAGE_URL)
+        st.image(banner, width=180)
 
     with col2:
         st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="sub-title">Create cinematic AI advertisements in one click.</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="sub-title">Turn products into cinematic AI ads.</div>', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.image(BANNER_URL, use_column_width=True)
 
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="section-title">What is AdForge?</div>', unsafe_allow_html=True)
         st.markdown(
             "<div class='small-text'>"
-            "AdForge AI Studio creates professional advertisements automatically. "
-            "Enter a product name and get a slogan, script, voiceover and billboard-style ad video."
+            "AdForge AI Studio creates advertisements automatically using AI. "
+            "Just enter a product and get a slogan, script, voiceover, and a billboard-style video ad."
             "</div>",
-            unsafe_allow_html=True
-        )
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        st.markdown('<div class="section-title">✨ Features</div>', unsafe_allow_html=True)
-        st.markdown(
-            "<div class='small-text'>"
-            "• LLaMA-powered slogan generator<br>"
-            "• LLaMA-powered ad scripts<br>"
-            "• AI voiceover (no uploads)<br>"
-            "• Auto-generated billboard visuals<br>"
-            "• AI video ads<br>"
-            "• Human talking ads (coming soon)"
-            "</div>",
-            unsafe_allow_html=True
-        )
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        st.markdown('<div class="section-title">🚀 Get Started</div>', unsafe_allow_html=True)
-        st.markdown(
-            "<div class='small-text'>Go to <b>Ad Studio</b> and generate your first AI ad.</div>",
             unsafe_allow_html=True
         )
         st.markdown("</div>", unsafe_allow_html=True)
@@ -220,8 +190,8 @@ elif menu == "Ad Studio":
             st.session_state.script = generate_with_llama(f"Generate a full ad script for {product}")
             st.success("AI slogan and script generated!")
 
-    slogan = st.text_input("AI Slogan", value=st.session_state.slogan)
-    script = st.text_area("AI Ad Script", value=st.session_state.script, height=140)
+    slogan = st.text_input("AI Slogan", value=st.session_state.slogan or "")
+    script = st.text_area("AI Ad Script", value=st.session_state.script or "", height=140)
 
     if st.button("🔊 Generate Voiceover"):
         if not script:
@@ -231,12 +201,25 @@ elif menu == "Ad Studio":
             st.success("Voiceover generated!")
             st.audio(st.session_state.audio)
 
-    if st.button("🎥 Generate Billboard + AI Video"):
-        if not product or not st.session_state.slogan or not st.session_state.audio:
-            st.error("Generate slogan, script and voiceover first.")
+    st.markdown("### 🧍 Human Image")
+    human_image = st.file_uploader("Upload human image (PNG/JPG)", type=["png", "jpg", "jpeg"])
+
+    st.markdown("### 🥤 Product Image")
+    product_image = st.file_uploader("Upload product image (PNG/JPG)", type=["png", "jpg", "jpeg"])
+
+    if st.button("🎥 Generate AI Ad Video"):
+        if not (product and st.session_state.slogan and st.session_state.audio and human_image and product_image):
+            st.error("Complete all steps: slogan, script, voiceover, human image, product image.")
         else:
             billboard = generate_billboard(product, st.session_state.slogan)
-            video = create_video(billboard, st.session_state.audio)
+
+            human_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+            Image.open(human_image).save(human_temp.name)
+
+            product_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+            Image.open(product_image).save(product_temp.name)
+
+            video = create_ad_video(billboard, human_temp.name, product_temp.name, st.session_state.audio)
 
             st.success("Your AI ad video is ready!")
             st.video(video)
@@ -249,14 +232,11 @@ elif menu == "Settings":
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
 
-    theme = st.selectbox("Theme", ["Dark", "Light"])
-    quality = st.selectbox("Video Quality", ["720p", "1080p"])
-    fps = st.selectbox("FPS", [24, 30, 60])
+    st.selectbox("Theme", ["Dark", "Light"])
+    st.selectbox("Video Quality", ["720p", "1080p"])
+    st.selectbox("FPS", [24, 30, 60])
 
-    st.markdown(
-        "<div class='small-text'>Settings will apply to future ad renders.</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("<div class='small-text'>Settings will apply to future ad renders.</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------- LICENSE ----------------
@@ -268,8 +248,8 @@ elif menu == "License":
     st.markdown(
         "<div class='small-text'>"
         "AdForge AI Studio – Community Edition<br><br>"
-        "You are free to use this application for personal and educational purposes.<br>"
-        "Commercial redistribution or resale is not permitted without permission.<br><br>"
+        "Free for personal and educational use.<br>"
+        "Commercial use requires permission.<br><br>"
         "© 2026 AdForge AI"
         "</div>",
         unsafe_allow_html=True
