@@ -1,7 +1,7 @@
 streamlit==1.28.1
 groq==0.4.1
-# elevenlabs removed - using requests instead
-Pillow==10.4.0  # Updated for Python 3.13 compatibility
+httpx==0.27.0
+Pillow==10.4.0
 rembg==2.0.52
 moviepy==1.0.3
 requests==2.31.0
