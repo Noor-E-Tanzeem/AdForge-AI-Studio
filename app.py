@@ -59,9 +59,9 @@ st.sidebar.markdown("Enter a product/topic, get a catchy slogan automatically, t
 # ---------------------------
 st.markdown('<h1 class="neon-header">🎬 AdForge AI Studio</h1>', unsafe_allow_html=True)
 
-# Uploaded decorative banner
-banner_image = Image.open("/mnt/data/8b652796-3a13-41fd-94d3-547a6acef6f1.png")
-st.image(banner_image, caption="💥 Iconic TV Ad Inspiration 💥", use_column_width=True)
+# Banner image using URL (your Postimg link)
+banner_url = "https://i.postimg.cc/CLnTFRX1/Screenshot-2026-01-22-232250.png"
+st.image(banner_url, caption="💥 Iconic TV Ad Inspiration 💥", use_column_width=True)
 
 st.markdown('<p class="emoji-title">Automatically generate catchy slogans & dynamic ad videos 🌟</p>', unsafe_allow_html=True)
 
