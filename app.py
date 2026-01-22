@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from groq import Groq
-from elevenlabs import ElevenLabs
+from elevenlabs import generate  # Updated import for v1.x SDK
 from PIL import Image, ImageDraw, ImageFont
 from rembg import remove
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
@@ -13,9 +13,8 @@ GROQ_API_KEY = st.secrets["groq_api_key"]
 ELEVENLABS_API_KEY = st.secrets["elevenlabs_api_key"]
 ELEVENLABS_VOICE_ID = st.secrets["elevenlabs_voice_id"]
 
-# Initialize clients
+# Initialize Groq client (Eleven Labs doesn't need a client object in v1.x)
 groq_client = Groq(api_key=GROQ_API_KEY)
-elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 # Function to generate script
 def generate_script(topic):
@@ -29,13 +28,17 @@ def generate_script(topic):
 
 # Function to generate voiceover MP3
 def generate_voiceover(text, voice_id):
-    audio = elevenlabs_client.generate(
+    # Updated for v1.x SDK: Use generate() directly
+    audio = generate(
         text=text,
         voice=voice_id,
+        api_key=ELEVENLABS_API_KEY,  # Pass API key here
         model="eleven_monolingual_v1"
     )
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
-        temp_file.write(audio)
+        # Save the audio bytes
+        with open(temp_file.name, "wb") as f:
+            f.write(audio)
         return temp_file.name
 
 # Function to edit image (background removal, text overlay, resize)
