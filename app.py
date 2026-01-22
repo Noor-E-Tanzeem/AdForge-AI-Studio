@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+from gtts import gTTS
 from groq import Groq
 from PIL import Image, ImageDraw, ImageFont
 from rembg import remove
@@ -8,18 +8,14 @@ import tempfile
 import os
 
 # ---------------------------
-# Secrets Handling
+# Secrets Handling (Groq only)
 # ---------------------------
 try:
     GROQ_API_KEY = st.secrets["groq_api_key"]
-    ELEVENLABS_API_KEY = st.secrets["elevenlabs_api_key"]
-    ELEVENLABS_VOICE_ID = st.secrets["elevenlabs_voice_id"]
 except KeyError:
     st.error(
-        "Missing secrets! Please add:\n"
+        "Missing secret! Please add:\n"
         "- groq_api_key\n"
-        "- elevenlabs_api_key\n"
-        "- elevenlabs_voice_id\n"
         "in Streamlit Cloud → Settings → Secrets"
     )
     st.stop()
@@ -52,30 +48,19 @@ def generate_script(topic):
             last_error = e
     raise Exception(f"Groq API error (all models failed): {last_error}")
 
-def generate_voiceover(text, voice_id):
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": ELEVENLABS_API_KEY
-    }
-    data = {
-        "text": text,
-        "model_id": "eleven_monolingual_v1",
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.5
-        }
-    }
-    response = requests.post(url, json=data, headers=headers)
-    if response.status_code == 200:
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-        temp_file.write(response.content)
-        temp_file.close()
-        return temp_file.name
-    else:
-        raise Exception(f"ElevenLabs API error: {response.status_code} - {response.text}")
+# ---------------------------
+# Google TTS Voiceover
+# ---------------------------
+def generate_voiceover(text, voice_id=None):
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    tts = gTTS(text=text, lang='en')
+    tts.save(temp_file.name)
+    temp_file.close()
+    return temp_file.name
 
+# ---------------------------
+# Image Editor
+# ---------------------------
 def edit_image(image_file, text_overlay, resize_width=800, resize_height=600):
     try:
         image = Image.open(image_file).convert("RGBA")
@@ -91,6 +76,9 @@ def edit_image(image_file, text_overlay, resize_width=800, resize_height=600):
     except Exception as e:
         raise Exception(f"Image processing error: {e}")
 
+# ---------------------------
+# Slideshow Video
+# ---------------------------
 def create_slideshow_video(image_path, audio_path, duration=10):
     try:
         image_clip = ImageClip(image_path).set_duration(duration)
@@ -110,6 +98,9 @@ def create_slideshow_video(image_path, audio_path, duration=10):
     except Exception as e:
         raise Exception(f"Video creation error: {e}")
 
+# ---------------------------
+# Cleanup temp files
+# ---------------------------
 def cleanup_file(key):
     if key in st.session_state:
         try:
@@ -161,7 +152,7 @@ else:
 if st.session_state.get("generate_voiceover_flag"):
     with st.spinner("Generating voiceover..."):
         try:
-            audio_path = generate_voiceover(st.session_state.script, ELEVENLABS_VOICE_ID)
+            audio_path = generate_voiceover(st.session_state.script)
             st.session_state.audio_path = audio_path
             st.success("Voiceover generated!")
             st.audio(audio_path, format="audio/mp3")
