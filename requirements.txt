@@ -1,9 +1,11 @@
 streamlit
 groq
-moviepy
 pillow
 rembg
 requests
 numpy
 opencv-python-headless
 onnxruntime
+moviepy==1.0.3
+imageio
+imageio-ffmpeg
