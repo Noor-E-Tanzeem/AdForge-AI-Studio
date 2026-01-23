@@ -229,7 +229,15 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
 
     product_clip = (
         ImageClip(tmp_prod.name)
-        .set_position(lambda t: (400 + int(120 * t), 220))
+        .set_position(
+    lambda t: (
+        400 + int(120 * (t / t2) ** 2),   # ease-in
+        220 + int(8 * (-1) ** int(t * 2)) # subtle vertical float
+    )
+)
+        product_clip = product_clip.resize(
+    lambda t: 1.0 + 0.03 * (t / t2)
+)
         .set_duration(t2)
     )
 
@@ -238,12 +246,16 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
     slogan_img.save(tmp_slogan.name)
 
     slogan_clip = (
-        ImageClip(tmp_slogan.name)
-        .set_position(("center", 60))
-        .set_duration(t2)
-    )
-
-    scene2 = CompositeVideoClip([scene2_bg, product_clip, slogan_clip])
+    ImageClip(tmp_slogan.name)
+    .set_position(lambda t: ("center", int(120 - 40 * (1 - min(t,1)))))
+    .set_duration(t2)
+    .fadein(0.6)
+)
+overlay = ColorClip(
+    (1280, 720),
+    color=(0, 0, 0)
+).set_opacity(0.25).set_duration(t2)
+    scene2 = CompositeVideoClip([scene2_bg,overlay, product_clip, slogan_clip])
 
     # ================= SCENE 3 — VALUE =================
     scene3_bg = ColorClip((1280, 720), color=(30, 30, 50)).set_duration(t3)
