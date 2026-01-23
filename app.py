@@ -28,16 +28,87 @@ st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wid
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
-body { background-color: #0e0f14; }
-.main-title { font-size: 46px; font-weight: 900; color: #ffffff; }
-.sub-title { font-size: 20px; color: #cfcfcf; }
-.card { background: #171a23; border-radius: 18px; padding: 28px; color: #ffffff; box-shadow: 0 8px 25px rgba(0,0,0,0.4);}
-.section-title { font-size: 28px; font-weight: 800; color: #4da6ff; }
-.feature-box { background:#1e2230; border-radius:14px; padding:20px; }
-.small-text { color: #dddddd; font-size: 16px; line-height: 1.6; }
-.footer-nav { position: fixed; bottom: 0; width: 100%; background: #171a23; padding: 12px; text-align: center; color: #aaaaaa; font-size: 14px; border-top: 1px solid #2b2f3a;}
-.center { text-align: center; }
-.profile-icon { position: absolute; top: 20px; right: 20px; }
+
+/* ---------- GLOBAL ---------- */
+body {
+    background-color: #0e0f14;
+}
+
+/* ---------- TYPOGRAPHY ---------- */
+.main-title {
+    font-size: 46px;
+    font-weight: 900;
+    color: #ffffff;
+}
+
+.sub-title {
+    font-size: 20px;
+    color: #cfcfcf;
+}
+
+/* ---------- CARDS & SECTIONS ---------- */
+.card {
+    background: #171a23;
+    border-radius: 18px;
+    padding: 28px;
+    color: #ffffff;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+}
+
+.section-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #4da6ff;
+}
+
+.feature-box {
+    background: #1e2230;
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.small-text {
+    color: #dddddd;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* ---------- FOOTER ---------- */
+.footer-nav {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: #171a23;
+    padding: 12px;
+    text-align: center;
+    color: #aaaaaa;
+    font-size: 14px;
+    border-top: 1px solid #2b2f3a;
+    z-index: 999;
+}
+
+/* ---------- UTIL ---------- */
+.center {
+    text-align: center;
+}
+
+/* ---------- PROFILE ICON (FIXED + MOBILE SAFE) ---------- */
+.profile-icon {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 1000;
+}
+
+.profile-icon img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid #4da6ff;
+    background: #111;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+}
+
 </style>
 """, unsafe_allow_html=True)
 
