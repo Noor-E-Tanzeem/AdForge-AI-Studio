@@ -5,7 +5,7 @@ from gtts import gTTS
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import base64
-import random
+import random 
 
 # ---------- SAFE MOVIEPY IMPORT ----------
 try:
@@ -17,7 +17,7 @@ try:
     concatenate_videoclips,
     AudioFileClip
 )
-    )
+    
     MOVIEPY_OK = True
 except Exception:
     MOVIEPY_OK = False
@@ -62,6 +62,8 @@ defaults = {
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
+
+# ---------------- UTILS ----------------
 
 # ---------------- UTILS ----------------
 
@@ -163,7 +165,9 @@ def generate_billboard(product, slogan, brand_color, cta, product_img=None):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     bg.save(tmp.name)
     return tmp.name
-    def make_text_image(text, size=(1100, 200)):
+
+
+def make_text_image(text, size=(1100, 200)):
     img = Image.new("RGBA", size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
@@ -184,28 +188,9 @@ def generate_billboard(product, slogan, brand_color, cta, product_img=None):
     )
 
     return img
-    def make_text_image(text, size=(1100, 200)):
-    img = Image.new("RGBA", size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
 
-    try:
-        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
-    except:
-        font = ImageFont.load_default()
 
-    bbox = draw.textbbox((0, 0), text, font=font)
-    w = bbox[2] - bbox[0]
-    h = bbox[3] - bbox[1]
-
-    draw.text(
-        ((size[0] - w) // 2, (size[1] - h) // 2),
-        text,
-        font=font,
-        fill=(255, 215, 0, 255)
-    )
-
-    return img
-    def generate_product_ad_video(product_img_path, audio_path, slogan):
+def generate_product_ad_video(product_img_path, audio_path, slogan):
     audio = AudioFileClip(audio_path)
     duration = audio.duration
 
