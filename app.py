@@ -194,18 +194,29 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
     audio = AudioFileClip(audio_path)
     duration = audio.duration
 
+    # ---- background ----
     bg = ColorClip(
         size=(1280, 720),
         color=(15, 15, 30)
     ).set_duration(duration)
 
+    # ---- SAFE PRODUCT RESIZE USING PIL ----
+    img = Image.open(product_img_path).convert("RGBA")
+    w, h = img.size
+    new_h = 360
+    new_w = int((new_h / h) * w)
+    img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    img.save(tmp_img.name)
+
     product = (
-        ImageClip(product_img_path)
-        .resize(height=360)
+        ImageClip(tmp_img.name)
         .set_position(lambda t: (460 + int(80 * t), 220))
         .set_duration(duration)
     )
 
+    # ---- TEXT ----
     text_img = make_text_image(slogan.upper())
     text_clip = (
         ImageClip(text_img)
