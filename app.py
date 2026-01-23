@@ -405,29 +405,78 @@ menu = st.sidebar.radio(
 # ---------------- HOME ----------------
 if menu == "Home":
 
-    st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">Create cinematic ads in seconds using AI</div>', unsafe_allow_html=True)
+    # ---- TITLE + LOGO ----
+    st.markdown(
+        """
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:14px;
+            margin-bottom:6px;
+        ">
+            <img src="https://i.postimg.cc/CLnTFRX1/Screenshot_2026_01_22_232250.png"
+                 style="
+                    width:34px;
+                    height:34px;
+                    border-radius:8px;
+                    box-shadow:0 4px 12px rgba(0,0,0,0.5);
+                 ">
+            <div style="
+                font-size:42px;
+                font-weight:900;
+                color:white;
+                line-height:1;
+            ">
+                AdForge AI Studio
+            </div>
+        </div>
 
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("### 🚀 Features")
-    st.markdown("""
-    • 🎬 AI Video Ads  
-    • 🖼 Smart Billboard Generator  
-    • 🎙 Voiceover AI  
-    • ✍ Script Generator  
-    • 🎨 Brand Styling  
-    • 📊 Audience Targeting  
-    • ⚡ Hackathon-ready UX  
-    """)
-    st.markdown("### 🔧 How It Works")
-    st.markdown("""
-    1️⃣ Enter your product  
-    2️⃣ Generate slogan + script  
-    3️⃣ Upload images  
-    4️⃣ Generate poster or video  
-    5️⃣ Download and share  
-    """)
-    st.markdown("</div>", unsafe_allow_html=True)
+        <div style="
+            font-size:18px;
+            color:#cfcfcf;
+            margin-bottom:28px;
+        ">
+            Create cinematic ads in seconds using AI
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---- FEATURES CARD ----
+    st.markdown(
+        """
+        <div class="card">
+            <div class="section-title">🚀 Features</div>
+            <div class="small-text">
+                • 🎬 AI Video Ads<br>
+                • 🖼 Smart Billboard Generator<br>
+                • 🎙 Voiceover AI<br>
+                • ✍ Script Generator<br>
+                • 🎨 Brand Styling<br>
+                • 📊 Audience Targeting<br>
+                • ⚡ Hackathon-ready UX
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---- HOW IT WORKS ----
+    st.markdown(
+        """
+        <div class="card" style="margin-top:24px;">
+            <div class="section-title">🛠 How It Works</div>
+            <div class="small-text">
+                1️⃣ Enter your product<br>
+                2️⃣ Generate slogan & script<br>
+                3️⃣ Upload product image<br>
+                4️⃣ Generate video or billboard<br>
+                5️⃣ Download & share
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ---------------- AD STUDIO ----------------
 elif menu == "Ad Studio":
