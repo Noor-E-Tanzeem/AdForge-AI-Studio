@@ -414,7 +414,6 @@ elif menu == "Billboard":
                 st.session_state.slogan,
                 st.session_state.brand_color,
                 st.session_state.cta,
-                st.session_state.human_img,
                 st.session_state.product_img
             )
 
