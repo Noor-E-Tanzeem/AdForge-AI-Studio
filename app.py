@@ -597,87 +597,77 @@ elif menu == "Billboard":
 # ---------------- SETTINGS ----------------
 elif menu == "Settings":
 
-    st.markdown(
-        """
-        <div style="
-            font-size:34px;
-            font-weight:800;
-            margin-bottom:20px;
-            color:white;
-        ">
-            ⚙ Settings
-        </div>
-        """,
-        unsafe_allow_html=True
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">⚙️ Settings</div>', unsafe_allow_html=True)
+
+    # -------- ACCOUNT --------
+    st.markdown("### 👤 Account")
+    st.text_input("Name", value=st.session_state.user_name, disabled=True)
+    st.text_input("Email", value=st.session_state.user_email, disabled=True)
+    st.text_input("Brand", value=st.session_state.user_brand, disabled=True)
+
+    st.divider()
+
+    # -------- PREFERENCES --------
+    st.markdown("### 🎨 Preferences")
+
+    theme = st.selectbox(
+        "App Theme",
+        ["Dark (Default)", "Light (Coming Soon)"],
+        disabled=True
     )
 
-    # ---- GENERAL SETTINGS CARD ----
-    st.markdown(
-        """
-        <div class="card" style="margin-bottom:22px;">
-            <div style="font-size:20px; font-weight:700; margin-bottom:14px;">
-                🎬 Video Preferences
-            </div>
-
-            <div style="color:#cfcfcf; line-height:1.8;">
-                • Resolution control <span style="opacity:0.6;">(Coming Soon)</span><br>
-                • Background music <span style="opacity:0.6;">(Coming Soon)</span><br>
-                • Scene transitions <span style="opacity:0.6;">(Coming Soon)</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
+    default_tone = st.selectbox(
+        "Default Ad Tone",
+        ["Corporate", "Funny", "Dramatic", "Luxury"],
+        index=["Corporate", "Funny", "Dramatic", "Luxury"].index(st.session_state.tone)
     )
 
-    # ---- VOICE SETTINGS CARD ----
-    st.markdown(
-        """
-        <div class="card" style="margin-bottom:22px;">
-            <div style="font-size:20px; font-weight:700; margin-bottom:14px;">
-                🎙 Voice & Audio
-            </div>
-
-            <div style="color:#cfcfcf; line-height:1.8;">
-                • Voice accents <span style="opacity:0.6;">(Coming Soon)</span><br>
-                • Voice speed control <span style="opacity:0.6;">(Coming Soon)</span><br>
-                • Emotion presets <span style="opacity:0.6;">(Coming Soon)</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
+    default_cta = st.selectbox(
+        "Default Call-To-Action",
+        ["Buy Now", "Shop Today", "Learn More", "Download App"],
+        index=["Buy Now", "Shop Today", "Learn More", "Download App"].index(st.session_state.cta)
     )
 
-    # ---- ACCOUNT SETTINGS CARD ----
-    st.markdown(
-        """
-        <div class="card" style="margin-bottom:22px;">
-            <div style="font-size:20px; font-weight:700; margin-bottom:14px;">
-                👤 Account
-            </div>
+    if st.button("💾 Save Preferences"):
+        st.session_state.tone = default_tone
+        st.session_state.cta = default_cta
+        st.success("Preferences saved!")
 
-            <div style="color:#cfcfcf; line-height:1.8;">
-                • Ad history <span style="opacity:0.6;">(Coming Soon)</span><br>
-                • Download history <span style="opacity:0.6;">(Coming Soon)</span><br>
-                • Project templates <span style="opacity:0.6;">(Coming Soon)</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.divider()
 
-    # ---- FOOTER BADGE ----
-    st.markdown(
-        """
-        <div style="
-            margin-top:30px;
-            text-align:center;
-            font-size:14px;
-            color:#9aa4b2;
-        ">
-            🚀 AdForge AI Studio — Hackathon Build
-        </div>
-        """,
-        unsafe_allow_html=True
+    # -------- FEEDBACK --------
+    st.markdown("### ⭐ Rate AdForge AI")
+
+    if not st.session_state.feedback_submitted:
+        rating = st.slider("Your Rating", 1, 5, st.session_state.rating)
+        review = st.text_area(
+            "Your Feedback",
+            placeholder="What did you like? What can be better?"
+        )
+
+        if st.button("Submit Feedback"):
+            st.session_state.rating = rating
+            st.session_state.review = review
+            st.session_state.feedback_submitted = True
+            st.success("Thanks for your feedback! 🙌")
+
+    else:
+        st.success("✅ Feedback already submitted")
+        st.markdown(f"**Rating:** ⭐ {st.session_state.rating}/5")
+        st.markdown(f"**Review:** {st.session_state.review or '—'}")
+
+    st.divider()
+
+    # -------- DANGER ZONE --------
+    st.markdown("### ⚠️ Danger Zone")
+
+    if st.button("🚪 Log Out"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
     )
 # ---------------- LICENSE ----------------
 elif menu == "License":
