@@ -411,30 +411,31 @@ if menu == "Home":
         <div style="
             display:flex;
             align-items:center;
-            gap:14px;
-            margin-bottom:6px;
+            gap:18px;
+            margin-bottom:10px;
         ">
             <img src="https://i.postimg.cc/CLnTFRX1/Screenshot_2026_01_22_232250.png"
                  style="
-                    width:34px;
-                    height:34px;
-                    border-radius:8px;
-                    box-shadow:0 4px 12px rgba(0,0,0,0.5);
+                    width:52px;
+                    height:52px;
+                    border-radius:10px;
+                    box-shadow:0 6px 16px rgba(0,0,0,0.55);
                  ">
             <div style="
-                font-size:42px;
+                font-size:44px;
                 font-weight:900;
                 color:white;
-                line-height:1;
+                line-height:1.05;
             ">
                 AdForge AI Studio
             </div>
         </div>
 
         <div style="
-            font-size:18px;
+            font-size:19px;
             color:#cfcfcf;
-            margin-bottom:28px;
+            margin-bottom:30px;
+            margin-left:70px;
         ">
             Create cinematic ads in seconds using AI
         </div>
@@ -442,42 +443,40 @@ if menu == "Home":
         unsafe_allow_html=True
     )
 
-    # ---- FEATURES CARD ----
-    st.markdown(
-        """
-        <div class="card">
-            <div class="section-title">🚀 Features</div>
-            <div class="small-text">
-                • 🎬 AI Video Ads<br>
-                • 🖼 Smart Billboard Generator<br>
-                • 🎙 Voiceover AI<br>
-                • ✍ Script Generator<br>
-                • 🎨 Brand Styling<br>
-                • 📊 Audience Targeting<br>
-                • ⚡ Hackathon-ready UX
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # ---- MAIN CARD ----
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    # ---- HOW IT WORKS ----
-    st.markdown(
-        """
-        <div class="card" style="margin-top:24px;">
-            <div class="section-title">🛠 How It Works</div>
-            <div class="small-text">
-                1️⃣ Enter your product<br>
-                2️⃣ Generate slogan & script<br>
-                3️⃣ Upload product image<br>
-                4️⃣ Generate video or billboard<br>
-                5️⃣ Download & share
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("### 🚀 Features")
+    st.markdown("""
+    • 🎬 **AI Video Advertisements**  
+    • 🖼 **Smart Billboard Generator**  
+    • 🎙 **AI Voiceover Engine**  
+    • ✍ **Script & Slogan Generator**  
+    • 🎨 **Brand Styling & Themes**  
+    • 📊 **Audience Targeting**  
+    • ⚡ **Hackathon-ready UX**
+    """)
 
+    st.markdown("### 🔧 How It Works")
+    st.markdown("""
+    1️⃣ Enter your product or idea  
+    2️⃣ Generate slogan & cinematic script  
+    3️⃣ Upload product image  
+    4️⃣ Generate video or billboard  
+    5️⃣ Download & share instantly  
+    """)
+
+    st.markdown("""
+    <div style="
+        margin-top:18px;
+        font-size:14px;
+        color:#9aa4b2;
+    ">
+        Built for hackathons • demos • rapid prototyping
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 # ---------------- AD STUDIO ----------------
 elif menu == "Ad Studio":
 
