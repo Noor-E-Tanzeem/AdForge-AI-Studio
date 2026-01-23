@@ -174,7 +174,10 @@ def generate_animated_human(human_img_path, audio_path):
         audio_b64 = base64.b64encode(f.read()).decode()
 
     payload = {"source_image": img_b64, "driver_audio": audio_b64}
-    headers = {"Authorization": f"Bearer {DID_API_KEY}", "Content-Type": "application/json"}
+    headers = {
+    "Authorization": DID_API_KEY,
+    "Content-Type": "application/json"
+}
 
     r = requests.post(url, json=payload, headers=headers).json()
     if "result_url" not in r:
