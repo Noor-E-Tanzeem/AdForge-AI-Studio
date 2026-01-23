@@ -418,97 +418,85 @@ menu = st.sidebar.radio(
 # ---------------- HOME ----------------
 if menu == "Home":
 
-    # ---------- HERO ----------
+    # ===== APP HEADER =====
     st.markdown(
         """
-        <div style="display:flex; align-items:center; gap:18px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:6px;">
             <img src="https://i.postimg.cc/CLnTFRX1/Screenshot_2026_01_22_232250.png"
-                 style="width:58px; height:58px; border-radius:10px;">
-            <div style="font-size:44px; font-weight:900;">AdForge AI Studio</div>
-        </div>
-
-        <div style="font-size:20px; color:#cfcfcf; margin-bottom:32px;">
-            Create cinematic advertisements in seconds using AI
+                 style="width:56px; height:56px; border-radius:12px;
+                        box-shadow:0 6px 18px rgba(0,0,0,0.55);">
+            <div>
+                <div style="font-size:42px; font-weight:900; color:white; line-height:1;">
+                    AdForge AI Studio
+                </div>
+                <div style="font-size:18px; color:#cfcfcf; margin-top:4px;">
+                    Create cinematic ads in seconds using AI
+                </div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # ---------- FEATURES ----------
-    st.markdown("## 🚀 Features")
+    # ===== APP BADGES =====
+    st.markdown("""
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin:18px 0 32px 0;">
+        <span style="background:#1e2230; padding:6px 14px; border-radius:999px;
+                     font-size:14px; color:#9ecbff;">🚀 Hackathon Build</span>
+        <span style="background:#1e2230; padding:6px 14px; border-radius:999px;
+                     font-size:14px; color:#9effb1;">⚡ AI-Powered</span>
+        <span style="background:#1e2230; padding:6px 14px; border-radius:999px;
+                     font-size:14px; color:#ffd28f;">🎯 Creator-Focused</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    f1, f2, f3 = st.columns(3)
+    # ===== FEATURES CARD =====
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("### 🚀 Features")
+    st.markdown("""
+    • 🎬 AI Video Advertisements  
+    • 🖼 Smart Billboard Generator  
+    • 🎙 Voiceover AI Engine  
+    • ✍ Script & Slogan Generator  
+    • 🎨 Brand Styling & Themes  
+    • 📊 Audience Targeting  
+    • ⚡ Hackathon-ready UX  
+    """)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    with f1:
-        st.markdown("🎬 **AI Video Advertisements**")
-        st.caption("Cinematic product ads with motion & voiceover")
+    # ===== HOW IT WORKS =====
+    st.markdown('<div class="card" style="margin-top:22px;">', unsafe_allow_html=True)
+    st.markdown("### 🛠 How It Works")
+    st.markdown("""
+    1️⃣ Enter your product or idea  
+    2️⃣ Generate slogan & cinematic script  
+    3️⃣ Upload product image  
+    4️⃣ Generate AI video or billboard  
+    5️⃣ Download, review & share  
+    """)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    with f2:
-        st.markdown("🖼 **Smart Billboard Generator**")
-        st.caption("High-impact posters with brand styling")
-
-    with f3:
-        st.markdown("🎙 **Voiceover Engine**")
-        st.caption("AI narration synced to visuals")
-
-    f4, f5, f6 = st.columns(3)
-
-    with f4:
-        st.markdown("✍ **Script & Slogan Generator**")
-        st.caption("Ad-ready copy in one click")
-
-    with f5:
-        st.markdown("🎨 **Brand Styling & Themes**")
-        st.caption("Colors, CTA & tone control")
-
-    with f6:
-        st.markdown("⚡ **Hackathon-Ready UX**")
-        st.caption("Fast, clean, demo-ready")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ---------- HOW IT WORKS ----------
-    st.markdown("## 🛠 How It Works")
-    st.markdown(
-        """
-        1️⃣ Enter your product or idea  
-        2️⃣ Generate slogan & cinematic script  
-        3️⃣ Upload product image  
-        4️⃣ Generate AI video or billboard  
-        5️⃣ Download, review & share  
-        """
-    )
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ---------- WHAT YOU CAN CREATE ----------
-    st.markdown("## 🔥 What You Can Create")
+    # ===== SAMPLE OUTPUT PREVIEW =====
+    st.markdown('<div class="card" style="margin-top:22px;">', unsafe_allow_html=True)
+    st.markdown("### 🔥 What You Can Create")
 
     c1, c2 = st.columns(2)
 
     with c1:
-        st.markdown("### 🖼 AI-Generated Billboard")
         st.image(
             "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
-            width=460
+            use_column_width=True
         )
-        st.caption("High-impact billboard with branding & CTA")
+        st.caption("🖼 AI-Generated Billboard with brand styling & CTA")
 
     with c2:
-        st.markdown("### 🎬 AI Video Advertisement")
         st.image(
             "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
-            width=460
+            use_column_width=True
         )
-        st.caption("Animated product ad with voiceover")
+        st.caption("🎬 Cinematic AI video with voiceover & animated captions")
 
-    st.markdown("<br><br>", unsafe_allow_html=True)
-
-    # ---------- FOOT NOTE ----------
-    st.markdown(
-        "<div style='color:#888;'>🚀 AdForge AI Studio — Hackathon Build</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("</div>", unsafe_allow_html=True)
 # ---------------- AD STUDIO ----------------
 elif menu == "Ad Studio":
 
