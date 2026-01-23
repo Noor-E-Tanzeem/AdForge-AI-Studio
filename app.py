@@ -215,48 +215,62 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
 
     scene1 = CompositeVideoClip([scene1_bg, hook_clip])
 
-    # ================= SCENE 2 — PRODUCT REVEAL =================
-    img = Image.open(product_img_path).convert("RGBA")
-    w, h = img.size
-    new_h = 360
-    new_w = int((new_h / h) * w)
-    img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+   # ================= SCENE 2 — PRODUCT REVEAL =================
 
-    tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    img.save(tmp_prod.name)
+# --- Resize product safely with PIL ---
+img = Image.open(product_img_path).convert("RGBA")
+w, h = img.size
+new_h = 360
+new_w = int((new_h / h) * w)
+img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-    scene2_bg = ColorClip((1280, 720), color=(20, 20, 40)).set_duration(t2)
+tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+img.save(tmp_prod.name)
 
-    product_clip = (
-        ImageClip(tmp_prod.name)
-        .set_position(
+# --- Background ---
+scene2_bg = ColorClip(
+    size=(1280, 720),
+    color=(20, 20, 40)
+).set_duration(t2)
+
+# --- Product motion (cinematic) ---
+product_clip = ImageClip(tmp_prod.name)
+product_clip = product_clip.set_position(
     lambda t: (
-        400 + int(120 * (t / t2) ** 2),   # ease-in
-        220 + int(8 * (-1) ** int(t * 2)) # subtle vertical float
+        400 + int(120 * (t / t2) ** 2),   # ease-in motion
+        220 + int(6 * (-1) ** int(t * 2)) # subtle float
     )
 )
-        product_clip = product_clip.resize(
+product_clip = product_clip.resize(
     lambda t: 1.0 + 0.03 * (t / t2)
 )
-        .set_duration(t2)
-    )
+product_clip = product_clip.set_duration(t2)
 
-    slogan_img = make_text_image(slogan.upper())
-    tmp_slogan = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    slogan_img.save(tmp_slogan.name)
+# --- Slogan text (PIL-rendered, safe) ---
+slogan_img = make_text_image(slogan.upper())
+tmp_slogan = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+slogan_img.save(tmp_slogan.name)
 
-    slogan_clip = (
-    ImageClip(tmp_slogan.name)
-    .set_position(lambda t: ("center", int(120 - 40 * (1 - min(t,1)))))
-    .set_duration(t2)
-    .fadein(0.6)
+slogan_clip = ImageClip(tmp_slogan.name)
+slogan_clip = slogan_clip.set_position(
+    lambda t: ("center", int(120 - 40 * min(t, 1)))
 )
+slogan_clip = slogan_clip.fadein(0.6)
+slogan_clip = slogan_clip.set_duration(t2)
+
+# --- Dark overlay for depth ---
 overlay = ColorClip(
-    (1280, 720),
+    size=(1280, 720),
     color=(0, 0, 0)
 ).set_opacity(0.25).set_duration(t2)
-    scene2 = CompositeVideoClip([scene2_bg,overlay, product_clip, slogan_clip])
 
+# --- Final Scene 2 composition ---
+scene2 = CompositeVideoClip([
+    scene2_bg,
+    overlay,
+    product_clip,
+    slogan_clip
+])
     # ================= SCENE 3 — VALUE =================
     scene3_bg = ColorClip((1280, 720), color=(30, 30, 50)).set_duration(t3)
 
