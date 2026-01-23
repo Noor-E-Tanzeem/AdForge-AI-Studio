@@ -330,22 +330,22 @@ elif menu == "Ad Studio":
             st.success("Voiceover ready!")
 
    if st.button("🎥 Generate AI Video"):
-    if not st.session_state.audio or not st.session_state.human_img:
-        st.error("Upload human image + generate voice.")
-    else:
-        talking_video = generate_animated_human(
-            st.session_state.human_img,
-            st.session_state.audio
-        )
-        if talking_video:
-            final_video = add_product_overlay(
-                talking_video,
-                st.session_state.product_img,
-                st.session_state.slogan
+        if not st.session_state.audio or not st.session_state.human_img:
+            st.error("Upload human image + generate voice.")
+        else:
+            talking_video = generate_animated_human(
+                st.session_state.human_img,
+                st.session_state.audio
             )
-            if final_video:
-                st.video(final_video)
-                st.success("AI Video Generated!")
+            if talking_video:
+                final_video = add_product_overlay(
+                    talking_video,
+                    st.session_state.product_img,
+                    st.session_state.slogan
+                )
+                if final_video:
+                    st.video(final_video)
+                    st.success("AI Video Generated!")
 # ---------------- BILLBOARD ----------------
 elif menu == "Billboard":
 
