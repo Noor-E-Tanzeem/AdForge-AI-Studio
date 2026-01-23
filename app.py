@@ -304,37 +304,47 @@ elif menu == "Ad Studio":
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">🎬 Ad Studio</div>', unsafe_allow_html=True)
 
+    # -------- INPUTS --------
     product = st.text_input("Product / Topic")
-    st.session_state.audience = st.selectbox("Audience", ["General","Youth","Corporate","Luxury"])
-    st.session_state.tone = st.selectbox("Ad Tone", ["Corporate","Funny","Dramatic","Luxury"])
-    st.session_state.cta = st.selectbox("Call-To-Action", ["Buy Now","Shop Today","Learn More","Download App"])
-    st.session_state.brand_color = st.color_picker("Brand Color", st.session_state.brand_color)
 
+    st.session_state.audience = st.selectbox(
+        "Audience", ["General", "Youth", "Corporate", "Luxury"]
+    )
+
+    st.session_state.tone = st.selectbox(
+        "Ad Tone", ["Corporate", "Funny", "Dramatic", "Luxury"]
+    )
+
+    st.session_state.cta = st.selectbox(
+        "Call-To-Action", ["Buy Now", "Shop Today", "Learn More", "Download App"]
+    )
+
+    st.session_state.brand_color = st.color_picker(
+        "Brand Color", st.session_state.brand_color
+    )
+
+    # -------- AI COPY --------
     if st.button("✨ Generate Slogan + Script"):
         if not product:
-            st.error("Enter a product.")
+            st.error("Enter a product name.")
         else:
             st.session_state.slogan = generate_with_llama(f"slogan for {product}")
             st.session_state.script = generate_with_llama(f"script for {product}")
             st.success("AI content generated!")
 
-    st.text_input("AI Slogan", value=st.session_state.slogan or "")
-    script = st.text_area("AI Script", value=st.session_state.script or "", height=120)
+    st.text_input("AI Slogan", value=st.session_state.slogan)
+    script = st.text_area("AI Script", value=st.session_state.script, height=150)
 
-    st.markdown("### 🧑 Upload Human Image")
-    human = st.file_uploader("Human Image", type=["png","jpg","jpeg"])
-    if human:
-        tmp_human = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        tmp_human.write(human.read())
-        st.session_state.human_img = tmp_human.name
-
+    # -------- PRODUCT IMAGE --------
     st.markdown("### 🥤 Upload Product Image")
-    prod = st.file_uploader("Product Image", type=["png","jpg","jpeg"])
+    prod = st.file_uploader("Product Image", type=["png", "jpg", "jpeg"])
     if prod:
         tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         tmp_prod.write(prod.read())
         st.session_state.product_img = tmp_prod.name
+        st.image(st.session_state.product_img, width=200)
 
+    # -------- VOICEOVER --------
     if st.button("🔊 Generate Voiceover"):
         if not script:
             st.error("Generate script first.")
@@ -342,18 +352,24 @@ elif menu == "Ad Studio":
             st.session_state.audio = generate_voiceover(script)
             st.audio(st.session_state.audio)
             st.success("Voiceover ready!")
-if st.button("🎥 Generate AI Video"):
-    if not st.session_state.audio or not st.session_state.product_img:
-        st.error("Generate voiceover and upload product image.")
-    else:
-        with st.spinner("Creating cinematic advertisement..."):
-            video = generate_product_ad_video(
-                st.session_state.product_img,
-                st.session_state.audio,
-                st.session_state.slogan
-            )
-        st.video(video)
-        st.success("Advertisement video generated!")
+
+    # -------- FINAL AD VIDEO --------
+    if st.button("🎥 Generate AI Video"):
+        if not st.session_state.audio or not st.session_state.product_img:
+            st.error("Upload product image and generate voiceover first.")
+        else:
+            with st.spinner("Creating cinematic advertisement..."):
+                video_path = generate_product_ad_video(
+                    st.session_state.product_img,
+                    st.session_state.audio,
+                    st.session_state.slogan
+                )
+
+            if video_path:
+                st.video(video_path)
+                st.success("🎬 Advertisement video generated successfully!")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 # ---------------- BILLBOARD ----------------
 elif menu == "Billboard":
 
