@@ -6,203 +6,271 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from io import BytesIO
 import base64
 import random
-import time
+import os
 
-# ---------- CINEMATIC RENDERING ENGINE ----------
-def create_luxury_billboard(brand, slogan, product_img_path):
-    # Base Canvas: Deep Midnight Gradient
-    canvas = Image.new("RGB", (1280, 720), (5, 5, 15))
-    draw = ImageDraw.Draw(canvas)
-    
-    # 🎨 AGENTIC DESIGN: Layer 1 - Geometric Depth
-    for i in range(0, 1280, 40):
-        draw.line([(i, 0), (i - 200, 720)], fill=(15, 20, 45), width=1)
-    
-    # Layer 2: Glowing Brand Accent
-    draw.rectangle([1250, 0, 1280, 720], fill="#4da6ff")
-    
-    # Layer 3: Product Integration with Soft Glow
-    if product_img_path:
-        prod = Image.open(product_img_path).convert("RGBA")
-        prod.thumbnail((550, 550))
-        # Create a glow effect
-        glow = Image.new("RGBA", (600, 600), (77, 166, 255, 30))
-        canvas.paste(glow, (650, 60), glow)
-        canvas.paste(prod, (680, 100), prod)
+# ---------- SAFE MOVIEPY IMPORT ----------
+try:
+    from moviepy.editor import ImageClip, VideoFileClip, CompositeVideoClip, TextClip
+    MOVIEPY_OK = True
+except Exception:
+    MOVIEPY_OK = False
 
-    # Layer 4: Typography Agent
-    # We use high-contrast white and brand-color text
-    draw.text((60, 100), brand.upper(), fill="#4da6ff")
-    draw.text((60, 140), "PREMIUM SELECTION", fill=(100, 100, 120))
-    
-    # Split slogan into lines if too long
-    words = slogan.split()
-    line1 = " ".join(words[:len(words)//2])
-    line2 = " ".join(words[len(words)//2:])
-    draw.text((60, 250), line1, fill="white")
-    draw.text((60, 320), line2, fill="white")
+# ---------------- CONFIG ----------------
+st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wide")
 
-    # Layer 5: Interactive CTA
-    draw.rounded_rectangle([60, 550, 350, 630], radius=15, fill="#ff4b4b")
-    draw.text((120, 575), "ORDER NOW", fill="white")
-
-    temp_path = tempfile.NamedTemporaryFile(delete=False, suffix=".png").name
-    canvas.save(temp_path)
-    return temp_path
-
-# ---------------- CONFIG & CSS ----------------
-st.set_page_config(page_title="AdForge AI Studio", page_icon="🚀", layout="wide")
-
+# ---------------- CSS ----------------
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] { background-color: #0e0f14; }
-    
-    /* FIX: Full Visibility Profile Icon */
-    .profile-container {
-        position: fixed;
-        top: 20px;
-        right: 40px;
-        z-index: 1000;
-        text-align: center;
-    }
-    .profile-img {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        border: 3px solid #4da6ff;
-        object-fit: cover;
-        background: #171a23;
-    }
-
-    .hero-banner {
-        width: 100%;
-        border-radius: 20px;
-        margin-bottom: 30px;
-        border: 1px solid #2b2f3a;
-    }
-    .card {
-        background: #171a23;
-        padding: 30px;
-        border-radius: 20px;
-        border: 1px solid #2b2f3a;
-        margin-bottom: 20px;
-    }
-    .stButton>button {
-        background: linear-gradient(90deg, #4da6ff, #0072ff);
-        color: white; border: none; border-radius: 10px; width: 100%;
-    }
+body { background-color: #0e0f14; }
+.main-title { font-size: 46px; font-weight: 900; color: #ffffff; }
+.sub-title { font-size: 20px; color: #cfcfcf; }
+.card { background: #171a23; border-radius: 18px; padding: 28px; color: #ffffff; box-shadow: 0 8px 25px rgba(0,0,0,0.4);}
+.section-title { font-size: 28px; font-weight: 800; color: #ff77aa; }
+.profile-icon { position: absolute; top: 20px; right: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- SESSION STATE ----------------
-if "profile_created" not in st.session_state:
-    st.session_state.update({
-        "profile_created": False, "user_name": "", "user_brand": "", "user_gender": "Male",
-        "slogan": "", "script": "", "avatar_url": "", "product_img": None
-    })
+# ---------------- SESSION DEFAULTS ----------------
+defaults = {
+    "profile_created": False,
+    "user_name": "",
+    "user_email": "",
+    "user_brand": "",
+    "user_gender": "Male",
+    "slogan": "",
+    "script": "",
+    "audio": None,
+    "human_img": None,
+    "product_img": None,
+    "billboard_img": None,
+    "audience": "General",
+    "tone": "Corporate",
+    "cta": "Buy Now",
+    "brand_color": "#ff77aa"
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-# ---------------- LOGIN LOGIC ----------------
+# ---------------- GROQ (LLAMA-3) ----------------
+GROQ_API_KEY = st.secrets.get("groq_api_key", "")
+
+def groq_llama(prompt):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama3-70b-8192",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.9
+    }
+    r = requests.post(url, json=payload, headers=headers)
+    return r.json()["choices"][0]["message"]["content"]
+
+# ---------------- MULTI-AGENT PIPELINE ----------------
+def slogan_agent(product, tone, audience):
+    fewshot = """
+Example:
+Product: Energy Drink
+Tone: Youth
+Audience: Students
+Slogan: "Fuel Your Hustle. Own the Day."
+
+Now generate a new slogan:
+"""
+    prompt = f"""{fewshot}
+Product: {product}
+Tone: {tone}
+Audience: {audience}
+Slogan:"""
+    return groq_llama(prompt).strip()
+
+def script_agent(product, slogan, tone, audience):
+    fewshot = """
+Example Script:
+Meet VoltX, the energy drink built for unstoppable ambition.
+Feel the surge from your first sip.
+Stay focused during late nights.
+Power your workouts.
+Crush deadlines.
+Fuel creativity.
+Beat fatigue.
+Rise stronger every day.
+VoltX — your energy, your edge.
+
+Now generate a similar 8–10 line script:
+"""
+    prompt = f"""{fewshot}
+Product: {product}
+Slogan: {slogan}
+Tone: {tone}
+Audience: {audience}
+Script:"""
+    return groq_llama(prompt).strip()
+
+def creative_agent(product, slogan):
+    styles = ["neon futuristic", "luxury gold", "youth graffiti", "corporate minimal"]
+    return random.choice(styles)
+
+# ---------------- VOICE ----------------
+def generate_voiceover(text):
+    tts = gTTS(text=text, lang="en")
+    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    tts.save(temp_audio.name)
+    return temp_audio.name
+
+# ---------------- DECORATIVE BILLBOARD ----------------
+def generate_billboard(product, slogan, brand_color, cta, human_img=None, product_img=None):
+    bg = Image.new("RGB", (1400, 800), brand_color)
+    draw = ImageDraw.Draw(bg)
+
+    overlay = Image.new("RGB", (1400, 800), (0,0,0))
+    overlay = overlay.filter(ImageFilter.GaussianBlur(120))
+    bg = Image.blend(bg, overlay, 0.35)
+
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 90)
+        font_slogan = ImageFont.truetype("DejaVuSans-Bold.ttf", 56)
+        font_cta = ImageFont.truetype("DejaVuSans-Bold.ttf", 52)
+    except:
+        font_title = ImageFont.load_default()
+        font_slogan = ImageFont.load_default()
+        font_cta = ImageFont.load_default()
+
+    draw.rounded_rectangle([50,50,1350,200], radius=40, fill=(20,20,40))
+    draw.text((80,90), product.upper(), fill=(255,255,255), font=font_title)
+
+    draw.rounded_rectangle([50,240,1350,360], radius=40, fill=(255,255,255))
+    draw.text((80,270), slogan, fill=(0,0,0), font=font_slogan)
+
+    if product_img:
+        prod = Image.open(product_img).convert("RGBA").resize((350,350))
+        bg.paste(prod, (80,400), prod)
+
+    if human_img:
+        human = Image.open(human_img).convert("RGBA").resize((300,450))
+        bg.paste(human, (1000,330), human)
+
+    draw.rounded_rectangle([500,650,900,740], radius=50, fill=(255,80,120))
+    w,h = draw.textsize(cta, font=font_cta)
+    draw.text((700-w//2, 670), cta, fill=(255,255,255), font=font_cta)
+
+    temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    bg.save(temp_img.name)
+    return temp_img.name
+
+# ---------------- D-ID ----------------
+def generate_animated_human(human_img_path, audio_path):
+    API_KEY = st.secrets.get("did_api_key", "")
+    if not API_KEY:
+        return None
+
+    url = "https://api.d-id.com/talks"
+    with open(human_img_path,"rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode()
+    with open(audio_path,"rb") as f:
+        audio_b64 = base64.b64encode(f.read()).decode()
+
+    payload = {"source_image": img_b64, "driver_audio": audio_b64}
+    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type":"application/json"}
+
+    r = requests.post(url, json=payload, headers=headers).json()
+
+    if "result_url" in r:
+        data = requests.get(r["result_url"]).content
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        tmp.write(data)
+        return tmp.name
+    return None
+
+# ---------------- PROFILE ----------------
 if not st.session_state.profile_created:
-    st.image("https://i.postimg.cc/3rz01J48/Screenshot_2026_01_23_021409.png", width=200)
-    with st.container():
-        st.markdown('<div class="card"><h2>🚀 Initialize AdForge OS</h2>', unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        name = col1.text_input("Operator Name")
-        brand = col2.text_input("Brand Identity")
-        gender = col1.selectbox("Avatar System", ["Male", "Female"])
-        if st.button("BOOT SYSTEM"):
-            if name and brand:
-                st.session_state.update({
-                    "user_name": name, "user_brand": brand, "user_gender": gender,
-                    "profile_created": True,
-                    "avatar_url": "https://i.postimg.cc/5tTtnXH0/Screenshot_2026_01_23_010056.png" if gender == "Male" else "https://i.postimg.cc/PrVnmBvh/Screenshot-2026-01-23-010324.png"
-                })
-                st.rerun()
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title center">👤 Create Your Profile</div>', unsafe_allow_html=True)
+    name = st.text_input("Name")
+    email = st.text_input("Email")
+    brand = st.text_input("Brand Name")
+    gender = st.selectbox("Gender", ["Male","Female"])
+    if st.button("Start 🚀"):
+        if name and email and brand:
+            st.session_state.profile_created = True
+            st.session_state.user_name = name
+            st.session_state.user_email = email
+            st.session_state.user_brand = brand
+            st.session_state.user_gender = gender
+            st.experimental_rerun()
+        else:
+            st.error("Fill all fields")
     st.stop()
 
-# ---------------- HEADER & NAV ----------------
-st.markdown(f'<div class="profile-container"><img src="{st.session_state.avatar_url}" class="profile-img"><br><small>{st.session_state.user_name}</small></div>', unsafe_allow_html=True)
-
-menu = st.sidebar.radio("Navigation", ["Home", "Ad Studio", "Marketplace"])
-
-# ---------------- HOME TAB (RESTORED BANNER) ----------------
-if menu == "Home":
-    st.image("https://i.postimg.cc/CLnTFRX1/Screenshot-2026-01-22-232250.png", use_column_width=True, caption="AdForge Enterprise v2.0")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        <div class="card">
-            <h3>🤖 Multi-Agent AI Core</h3>
-            <p>Our Llama 3 backbone uses <b>Agentic Workflows</b>:</p>
-            <ul>
-                <li><b>Creative Director Agent:</b> Tone & Market Analysis</li>
-                <li><b>Copywriting Agent:</b> 10-Line Script Mastery</li>
-                <li><b>Visual Agent:</b> Billboard Composition</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown("""
-        <div class="card">
-            <h3>✨ Key Features</h3>
-            <ul>
-                <li>Few-Shot Response Engineering</li>
-                <li>Dynamic Motion Ad Rendering</li>
-                <li>Real-time Groq LPU Processing</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+# ---------------- SIDEBAR ----------------
+st.sidebar.markdown(f"👋 Hello, {st.session_state.user_name}")
+menu = st.sidebar.radio("📌 Navigation", ["Ad Studio","Billboard"])
 
 # ---------------- AD STUDIO ----------------
-elif menu == "Ad Studio":
-    st.title("🎬 Multi-Agent Creative Studio")
-    
-    with st.expander("🛠️ Agent Configuration", expanded=True):
-        prod = st.text_input("Target Product")
-        tone = st.select_slider("Creative Tone", ["Funny", "Professional", "Dramatic"])
+if menu == "Ad Studio":
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🎬 Ad Studio</div>', unsafe_allow_html=True)
 
-    if st.button("🧠 Invoke Agents"):
-        with st.status("Agents are collaborating...") as status:
-            # Multi-agent simulation
-            st.write("Agent 1 (Strategist): Analyzing market fit...")
-            time.sleep(1)
-            st.write("Agent 2 (Writer): Applying few-shot concepts...")
-            
-            # REAL API CALL with Error Handling
-            try:
-                api_key = st.secrets["groq_api_key"]
-                resp = requests.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    json={
-                        "model": "llama3-70b-8192",
-                        "messages": [{"role": "system", "content": "You are a professional ad agency. Provide a 5-word slogan and a 10-line high-energy ad script with emojis."},
-                                     {"role": "user", "content": f"Create an ad for {prod} with a {tone} tone."}]
-                    }
-                ).json()
-                
-                content = resp['choices'][0]['message']['content']
-                # Splitting logic
-                st.session_state.slogan = " ".join(content.split()[:5]) + "..."
-                st.session_state.script = content
-                status.update(label="Creative Ready!", state="complete")
-            except:
-                st.session_state.slogan = f"Experience the Power of {prod} Today."
-                st.session_state.script = f"🚀 Unleash your potential with {prod}.\n" * 8
-                status.update(label="Manual Fallback Active", state="error")
+    product = st.text_input("Product / Topic")
+    st.session_state.audience = st.selectbox("Audience", ["General","Youth","Corporate","Luxury"])
+    st.session_state.tone = st.selectbox("Ad Tone", ["Corporate","Funny","Dramatic","Luxury"])
+    st.session_state.cta = st.selectbox("Call-To-Action", ["Buy Now","Shop Today","Learn More"])
+    st.session_state.brand_color = st.color_picker("Brand Color", st.session_state.brand_color)
 
-    st.text_input("Final Slogan", value=st.session_state.slogan)
-    st.text_area("Multi-Line Script", value=st.session_state.script, height=250)
+    if st.button("✨ Generate AI Content"):
+        slogan = slogan_agent(product, st.session_state.tone, st.session_state.audience)
+        script = script_agent(product, slogan, st.session_state.tone, st.session_state.audience)
+        st.session_state.slogan = slogan
+        st.session_state.script = script
 
-    # BILLBOARD GENERATION
-    st.divider()
-    st.subheader("🖼️ Premium Billboard Generation")
-    u_prod = st.file_uploader("Upload Product Master Image")
-    if u_prod:
-        st.session_state.product_img = u_prod
-        if st.button("🎨 Render Luxury Billboard"):
-            path = create_luxury_billboard(st.session_state.user_brand, st.session_state.slogan, u_prod)
-            st.image(path, use_column_width=True)
-            with open(path, "rb") as f:
-                st.download_button("Download 4K Billboard", f, "billboard.png")
+    st.text_input("AI Slogan", value=st.session_state.slogan)
+    script = st.text_area("AI Script (8–10 lines)", value=st.session_state.script, height=220)
+
+    human = st.file_uploader("Human Image", type=["png","jpg"])
+    if human:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        tmp.write(human.read())
+        st.session_state.human_img = tmp.name
+
+    prod = st.file_uploader("Product Image", type=["png","jpg"])
+    if prod:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        tmp.write(prod.read())
+        st.session_state.product_img = tmp.name
+
+    if st.button("🔊 Generate Voice"):
+        st.session_state.audio = generate_voiceover(script)
+        st.audio(st.session_state.audio)
+
+    if st.button("🎥 Generate AI Video"):
+        video = generate_animated_human(st.session_state.human_img, st.session_state.audio)
+        if video:
+            st.video(video)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- BILLBOARD ----------------
+elif menu == "Billboard":
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🖼 Decorative Billboard</div>', unsafe_allow_html=True)
+
+    if st.button("🎨 Generate Billboard"):
+        img = generate_billboard(
+            st.session_state.user_brand,
+            st.session_state.slogan,
+            st.session_state.brand_color,
+            st.session_state.cta,
+            st.session_state.human_img,
+            st.session_state.product_img
+        )
+        st.session_state.billboard_img = img
+        st.image(img, use_column_width=True)
+
+    if st.session_state.billboard_img:
+        with open(st.session_state.billboard_img, "rb") as f:
+            st.download_button("⬇ Download Billboard", f, "billboard.png")
+
+    st.markdown("</div>", unsafe_allow_html=True)
