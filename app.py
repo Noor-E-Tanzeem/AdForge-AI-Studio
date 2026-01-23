@@ -9,7 +9,10 @@ import random
 
 # ---------- SAFE MOVIEPY IMPORT ----------
 try:
-    from moviepy.editor import ImageClip, VideoFileClip, CompositeVideoClip, TextClip
+   from moviepy.editor import (
+    ImageClip, VideoFileClip, CompositeVideoClip,
+    TextClip, ColorClip, concatenate_videoclips
+)
     MOVIEPY_OK = True
 except Exception:
     MOVIEPY_OK = False
@@ -480,8 +483,8 @@ elif menu == "Billboard":
         if not st.session_state.slogan:
             st.error("Generate slogan first.")
         else:
-            img = generate_billboard(
-                product,
+           img = generate_billboard(
+    st.session_state.user_brand or "Product",
                 st.session_state.slogan,
                 st.session_state.brand_color,
                 st.session_state.cta,
