@@ -1,7 +1,7 @@
 streamlit
 requests
+gtts
 Pillow
-gTTS
 moviepy
-groq
-numpy
+imageio
+imageio-ffmpeg
