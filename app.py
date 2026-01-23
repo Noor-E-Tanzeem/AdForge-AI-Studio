@@ -1,4 +1,4 @@
-app.py:import streamlit as st
+import streamlit as st
 import tempfile
 import requests
 from gtts import gTTS
