@@ -109,9 +109,57 @@ def generate_with_llama(prompt):
 
         return data["choices"][0]["message"]["content"].strip()
 
+    def generate_with_llama(prompt):
+    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
+    if not GROQ_API_KEY:
+        return fallback_copy(prompt)
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    system_prompt = (
+        "You are an expert advertising copywriter. "
+        "Generate creative, product-specific, non-generic ad content."
+    )
+
+    if "slogan" in prompt.lower():
+        user_prompt = f"{prompt}\nGenerate ONE catchy slogan (max 10 words)."
+    elif "script" in prompt.lower():
+        user_prompt = f"{prompt}\nGenerate a 6–7 line cinematic voiceover script."
+    else:
+        user_prompt = prompt
+
+    payload = {
+        "model": "llama3-8b-8192",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0.9,
+        "max_tokens": 350
+    }
+
+    try:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=20
+        )
+
+        data = response.json()
+        if "choices" not in data:
+            return fallback_copy(prompt)
+
+        return data["choices"][0]["message"]["content"].strip()
+
     except Exception:
         return fallback_copy(prompt)
-        def fallback_copy(prompt):
+
+
+def fallback_copy(prompt):
     if "slogan" in prompt.lower():
         product = prompt.replace("slogan for", "").strip()
         return f"{product.capitalize()} that’s ready when you are."
