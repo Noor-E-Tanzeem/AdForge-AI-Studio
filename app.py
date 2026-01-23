@@ -551,31 +551,27 @@ if menu == "Home":
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # ===== SAMPLE OUTPUT PREVIEW =====
-    st.markdown("## 🔥 What You Can Create")
+st.markdown("## 🔥 What You Can Create")
 
-    p1, p2 = st.columns(2)
+p1, p2 = st.columns(2, gap="large")
 
-    with p1:
-        st.image(
-            "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
-            caption="AI-Generated Billboard",
-            use_column_width=True
-        )
+with p1:
+    st.markdown("### 🖼 AI-Generated Billboard")
+    st.image(
+        "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
+        width=380
+    )
+    st.caption("High-impact billboard with brand styling & CTA")
 
-    with p2:
-        st.image(
-            "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
-            caption="AI Video Advertisement",
-            use_column_width=True
-        )
+with p2:
+    st.markdown("### 🎬 AI Video Advertisement")
+    st.image(
+        "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
+        width=380
+    )
+    st.caption("Cinematic motion ad with voiceover & captions")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div style="opacity:0.7; font-size:14px;">
-    AdForge AI Studio — Hackathon Build
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 # ---------------- AD STUDIO ----------------
 elif menu == "Ad Studio":
 
