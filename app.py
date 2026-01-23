@@ -367,7 +367,7 @@ if not st.session_state.profile_created:
             st.session_state.user_email = email
             st.session_state.user_brand = brand
             st.session_state.user_gender = gender
-            st.experimental_rerun()
+            st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
