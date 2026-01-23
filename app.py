@@ -98,13 +98,13 @@ def generate_with_llama(prompt):
     }
 
     try:
-        response = requests.post(
+        r = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             json=payload,
             timeout=20
         )
-        data = response.json()
+        data = r.json()
         return data["choices"][0]["message"]["content"].strip()
     except Exception:
         return fallback_copy(prompt)
@@ -112,8 +112,10 @@ def generate_with_llama(prompt):
 
 def fallback_copy(prompt):
     product = prompt.replace("slogan for", "").replace("script for", "").strip()
+
     if "slogan" in prompt.lower():
         return f"{product.capitalize()} that’s ready when you are."
+
     return (
         f"This is not just {product}.\n"
         f"Designed for real-life moments.\n"
@@ -159,58 +161,67 @@ def generate_billboard(product, slogan, brand_color, cta, human_img=None, produc
     return tmp.name
 
 
-def generate_animated_human(human_img_path, audio_path):
-    DID_API_KEY = st.secrets.get("did_api_key", "")
-    if not DID_API_KEY:
-        st.error("D-ID API key missing")
-        return None
-
-    url = "https://api.d-id.com/talks"
-
-    with open(human_img_path, "rb") as f:
-        img_b64 = base64.b64encode(f.read()).decode()
-
-    with open(audio_path, "rb") as f:
-        audio_b64 = base64.b64encode(f.read()).decode()
-
-    payload = {"source_image": img_b64, "driver_audio": audio_b64}
-    headers = {
-    "Authorization": DID_API_KEY,
-    "Content-Type": "application/json"
-}
-
-    r = requests.post(url, json=payload, headers=headers).json()
-    if "result_url" not in r:
-        st.error(r)
-        return None
-
-    video = requests.get(r["result_url"]).content
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    tmp.write(video)
-    return tmp.name
-
-
-def add_product_overlay(video_path, product_img, slogan):
-    video = VideoFileClip(video_path)
-    layers = [video]
-
-    if product_img:
-        layers.append(
-            ImageClip(product_img)
-            .resize(height=200)
-            .set_position(("right", "bottom"))
-            .set_duration(video.duration)
-        )
-
-    layers.append(
-        TextClip(slogan, fontsize=40, color="yellow", method="caption")
-        .set_position(("center", 30))
-        .set_duration(video.duration)
+def generate_product_ad_video(product_img, audio_path, slogan):
+    from moviepy.editor import (
+        ImageClip, TextClip, CompositeVideoClip,
+        ColorClip, concatenate_videoclips, AudioFileClip
     )
 
-    final = CompositeVideoClip(layers)
+    audio = AudioFileClip(audio_path)
+    duration = audio.duration
+    W, H = 1280, 720
+
+    # ---------- SCENE 1: INTRO ----------
+    bg1 = ColorClip((W, H), color=(10, 10, 30)).set_duration(2)
+    text1 = TextClip(
+        slogan,
+        fontsize=80,
+        color="yellow",
+        font="DejaVu-Sans-Bold",
+        method="caption",
+        size=(W - 200, None)
+    ).set_position("center").set_duration(2)
+
+    scene1 = CompositeVideoClip([bg1, text1])
+
+    # ---------- SCENE 2: PRODUCT MOVEMENT ----------
+    bg2 = ColorClip((W, H), color=(20, 20, 40)).set_duration(duration)
+
+    product = (
+        ImageClip(product_img)
+        .resize(height=350)
+        .set_position(lambda t: (100 + int(t * 120), int(H / 2 - 175)))
+        .set_duration(duration)
+    )
+
+    caption = TextClip(
+        "Designed for real life.",
+        fontsize=50,
+        color="white",
+        font="DejaVu-Sans-Bold"
+    ).set_position(("center", 40)).set_duration(duration)
+
+    scene2 = CompositeVideoClip([bg2, product, caption])
+
+    # ---------- SCENE 3: CTA ----------
+    bg3 = ColorClip((W, H), color=(40, 0, 0)).set_duration(2)
+    cta = TextClip(
+        "Experience the Difference\nAct Now",
+        fontsize=70,
+        color="white",
+        font="DejaVu-Sans-Bold",
+        method="caption",
+        size=(W - 200, None)
+    ).set_position("center").set_duration(2)
+
+    scene3 = CompositeVideoClip([bg3, cta])
+
+    final = concatenate_videoclips([scene1, scene2, scene3], method="compose")
+    final = final.set_audio(audio)
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    final.write_videofile(tmp.name, fps=24)
+    final.write_videofile(tmp.name, fps=24, codec="libx264", audio_codec="aac")
+
     return tmp.name
 # ---------------- PROFILE CREATION ----------------
 if not st.session_state.profile_created:
@@ -332,22 +343,17 @@ elif menu == "Ad Studio":
             st.audio(st.session_state.audio)
             st.success("Voiceover ready!")
 if st.button("🎥 Generate AI Video"):
-        if not st.session_state.audio or not st.session_state.human_img:
-            st.error("Upload human image + generate voice.")
-        else:
-            talking_video = generate_animated_human(
-                st.session_state.human_img,
-                st.session_state.audio
+    if not st.session_state.audio or not st.session_state.product_img:
+        st.error("Generate voiceover and upload product image.")
+    else:
+        with st.spinner("Creating cinematic advertisement..."):
+            video = generate_product_ad_video(
+                st.session_state.product_img,
+                st.session_state.audio,
+                st.session_state.slogan
             )
-            if talking_video:
-                final_video = add_product_overlay(
-                    talking_video,
-                    st.session_state.product_img,
-                    st.session_state.slogan
-                )
-                if final_video:
-                    st.video(final_video)
-                    st.success("AI Video Generated!")
+        st.video(video)
+        st.success("Advertisement video generated!")
 # ---------------- BILLBOARD ----------------
 elif menu == "Billboard":
 
