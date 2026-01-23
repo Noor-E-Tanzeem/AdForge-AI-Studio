@@ -78,16 +78,71 @@ def voice_agent(text):
 # -------------------------------------------------
 # BILLBOARD VISUAL AGENT
 # -------------------------------------------------
-def billboard_agent(product, slogan, cta):
-    img = Image.new("RGB",(1280,720),(12,14,30))
-    d = ImageDraw.Draw(img)
+def generate_billboard(product, slogan, brand_color, cta, human_img=None, product_img=None):
+    """
+    Multimodal Billboard Generator
+    Uses real-world billboard images (search-based) + AI overlay
+    """
+
+    # ---- STEP 1: SEARCH REAL BILLBOARD IMAGE ----
+    search_query = f"{product} advertising billboard"
+    bing_url = f"https://www.bing.com/images/search?q={search_query}&form=HDRSC2"
 
     try:
-        big = ImageFont.truetype("DejaVuSans-Bold.ttf",80)
-        mid = ImageFont.truetype("DejaVuSans-Bold.ttf",55)
-        btn = ImageFont.truetype("DejaVuSans-Bold.ttf",45)
+        headers = {"User-Agent": "Mozilla/5.0"}
+        html = requests.get(bing_url, headers=headers).text
+
+        # crude but effective image scrape
+        img_urls = []
+        for line in html.split('"'):
+            if line.startswith("https") and ("jpg" in line or "png" in line):
+                img_urls.append(line)
+
+        if not img_urls:
+            raise Exception("No images found")
+
+        img_url = random.choice(img_urls[:10])
+        response = requests.get(img_url, headers=headers, timeout=10)
+        bg = Image.open(BytesIO(response.content)).convert("RGB").resize((1280, 720))
+
+    except Exception:
+        # fallback background
+        bg = Image.new("RGB", (1280, 720), (20, 20, 40))
+
+    draw = ImageDraw.Draw(bg)
+
+    # ---- STEP 2: LOAD FONTS ----
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
+        font_slogan = ImageFont.truetype("DejaVuSans-Bold.ttf", 46)
+        font_cta = ImageFont.truetype("DejaVuSans-Bold.ttf", 42)
     except:
-        big = mid = btn = ImageFont.load_default()
+        font_title = font_slogan = font_cta = ImageFont.load_default()
+
+    # ---- STEP 3: DECORATIVE OVERLAY ----
+    overlay = Image.new("RGBA", bg.size, (0, 0, 0, 120))
+    bg = Image.alpha_composite(bg.convert("RGBA"), overlay)
+
+    draw = ImageDraw.Draw(bg)
+
+    # ---- STEP 4: BRAND TEXT ----
+    draw.text((40, 40), product.upper(), fill=(255,255,255), font=font_title)
+    draw.text((40, 130), slogan, fill=(255, 215, 0), font=font_slogan)
+
+    # ---- STEP 5: CTA BUTTON ----
+    draw.rounded_rectangle([900, 560, 1220, 650], radius=35, fill=(255,80,80))
+    w, h = draw.textsize(cta, font=font_cta)
+    draw.text((1060 - w//2, 585), cta, fill=(255,255,255), font=font_cta)
+
+    # ---- STEP 6: OPTIONAL PRODUCT IMAGE ----
+    if product_img:
+        prod = Image.open(product_img).convert("RGBA").resize((260,260))
+        bg.paste(prod, (40, 420), prod)
+
+    # ---- SAVE ----
+    temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    bg.convert("RGB").save(temp_img.name)
+    return temp_img.name
 
     # Neon Header
     d.rectangle([0,0,1280,120],fill=(255,60,100))
