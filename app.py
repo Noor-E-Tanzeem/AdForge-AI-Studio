@@ -159,68 +159,65 @@ def generate_billboard(product, slogan, brand_color, cta, human_img=None, produc
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     bg.save(tmp.name)
     return tmp.name
+    def make_text_image(text, size=(1100, 200)):
+    img = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
 
+    try:
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
+    except:
+        font = ImageFont.load_default()
 
-def generate_product_ad_video(product_img, audio_path, slogan):
-    from moviepy.editor import (
-        ImageClip, TextClip, CompositeVideoClip,
-        ColorClip, concatenate_videoclips, AudioFileClip
+    bbox = draw.textbbox((0, 0), text, font=font)
+    w = bbox[2] - bbox[0]
+    h = bbox[3] - bbox[1]
+
+    draw.text(
+        ((size[0] - w) // 2, (size[1] - h) // 2),
+        text,
+        font=font,
+        fill=(255, 215, 0, 255)
     )
+
+    return img
+
+
+def generate_product_ad_video(product_img_path, audio_path, slogan):
+    if not MOVIEPY_OK:
+        st.error("MoviePy not available")
+        return None
 
     audio = AudioFileClip(audio_path)
     duration = audio.duration
-    W, H = 1280, 720
 
-    # ---------- SCENE 1: INTRO ----------
-    bg1 = ColorClip((W, H), color=(10, 10, 30)).set_duration(2)
-    text1 = TextClip(
-        slogan,
-        fontsize=80,
-        color="yellow",
-        font="DejaVu-Sans-Bold",
-        method="caption",
-        size=(W - 200, None)
-    ).set_position("center").set_duration(2)
-
-    scene1 = CompositeVideoClip([bg1, text1])
-
-    # ---------- SCENE 2: PRODUCT MOVEMENT ----------
-    bg2 = ColorClip((W, H), color=(20, 20, 40)).set_duration(duration)
+    bg = ColorClip(size=(1280, 720), color=(15, 15, 30)).set_duration(duration)
 
     product = (
-        ImageClip(product_img)
-        .resize(height=350)
-        .set_position(lambda t: (100 + int(t * 120), int(H / 2 - 175)))
+        ImageClip(product_img_path)
+        .resize(height=360)
+        .set_position(lambda t: (460 + int(60 * t), 220))
         .set_duration(duration)
     )
 
-    caption = TextClip(
-        "Designed for real life.",
-        fontsize=50,
-        color="white",
-        font="DejaVu-Sans-Bold"
-    ).set_position(("center", 40)).set_duration(duration)
+    # ---- TEXT VIA PIL (SAFE) ----
+    text_img = make_text_image(slogan.upper())
+    text_clip = (
+        ImageClip(text_img)
+        .set_position(("center", 60))
+        .set_duration(duration)
+    )
 
-    scene2 = CompositeVideoClip([bg2, product, caption])
-
-    # ---------- SCENE 3: CTA ----------
-    bg3 = ColorClip((W, H), color=(40, 0, 0)).set_duration(2)
-    cta = TextClip(
-        "Experience the Difference\nAct Now",
-        fontsize=70,
-        color="white",
-        font="DejaVu-Sans-Bold",
-        method="caption",
-        size=(W - 200, None)
-    ).set_position("center").set_duration(2)
-
-    scene3 = CompositeVideoClip([bg3, cta])
-
-    final = concatenate_videoclips([scene1, scene2, scene3], method="compose")
-    final = final.set_audio(audio)
+    final = CompositeVideoClip([bg, product, text_clip]).set_audio(audio)
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    final.write_videofile(tmp.name, fps=24, codec="libx264", audio_codec="aac")
+    final.write_videofile(
+        tmp.name,
+        fps=24,
+        codec="libx264",
+        audio_codec="aac",
+        verbose=False,
+        logger=None
+    )
 
     return tmp.name
 # ---------------- PROFILE CREATION ----------------
