@@ -328,8 +328,7 @@ elif menu == "Ad Studio":
             st.session_state.audio = generate_voiceover(script)
             st.audio(st.session_state.audio)
             st.success("Voiceover ready!")
-
-   if st.button("🎥 Generate AI Video"):
+if st.button("🎥 Generate AI Video"):
         if not st.session_state.audio or not st.session_state.human_img:
             st.error("Upload human image + generate voice.")
         else:
