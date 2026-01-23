@@ -1,83 +1,137 @@
-import streamlit as st
-import tempfile, base64, requests, numpy as np
-from PIL import Image, ImageDraw, ImageFont
+app.py:import streamlit as st
+import tempfile
+import requests
 from gtts import gTTS
-from groq import Groq
-from moviepy.editor import ImageClip, TextClip, CompositeVideoClip, AudioFileClip
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+import base64
+import random
 
-# -------------------------------------------------
-# PAGE CONFIG
-# -------------------------------------------------
-st.set_page_config(
-    page_title="AdForge AI Studio",
-    page_icon="🎬",
-    layout="wide"
-)
+# ---------- SAFE MOVIEPY IMPORT ----------
+try:
+    from moviepy.editor import ImageClip, VideoFileClip, CompositeVideoClip, TextClip
+    MOVIEPY_OK = True
+except Exception:
+    MOVIEPY_OK = False
 
-# -------------------------------------------------
-# INIT LLaMA (Groq)
-# -------------------------------------------------
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+# ---------------- CONFIG ----------------
+st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wide")
 
-# -------------------------------------------------
-# MULTI-AGENT SYSTEM
-# -------------------------------------------------
-def agentic_campaign(product, audience, tone, cta):
-    prompt = f"""
-You are an AGENTIC AI SYSTEM trained in multi-agent collaboration.
+# ---------------- CSS ----------------
+st.markdown("""
+<style>
+body { background-color: #0e0f14; }
+.main-title { font-size: 46px; font-weight: 900; color: #ffffff; }
+.sub-title { font-size: 20px; color: #cfcfcf; }
+.card { background: #171a23; border-radius: 18px; padding: 28px; color: #ffffff; box-shadow: 0 8px 25px rgba(0,0,0,0.4);}
+.section-title { font-size: 28px; font-weight: 800; color: #4da6ff; }
+.feature-box { background:#1e2230; border-radius:14px; padding:20px; }
+.small-text { color: #dddddd; font-size: 16px; line-height: 1.6; }
+.footer-nav { position: fixed; bottom: 0; width: 100%; background: #171a23; padding: 12px; text-align: center; color: #aaaaaa; font-size: 14px; border-top: 1px solid #2b2f3a;}
+.center { text-align: center; }
+.profile-icon { position: absolute; top: 20px; right: 20px; }
+</style>
+""", unsafe_allow_html=True)
 
-AGENT 1 – Brand Strategist:
-Define brand personality for "{product}"
+# ---------------- SESSION DEFAULTS ----------------
+defaults = {
+    "profile_created": False,
+    "user_name": "",
+    "user_email": "",
+    "user_brand": "",
+    "user_gender": "Male",
+    "slogan": "",
+    "script": "",
+    "audio": None,
+    "human_img": None,
+    "product_img": None,
+    "billboard_img": None,
+    "audience": "General",
+    "tone": "Corporate",
+    "cta": "Buy Now",
+    "brand_color": "#4da6ff"
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-AGENT 2 – Audience Analyst:
-Adapt messaging for audience "{audience}"
+# ---------------- UTILS ----------------
+def load_image(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content))
 
-AGENT 3 – Copywriter:
-Write a CINEMATIC AD SCRIPT of 8–10 SHORT LINES
-• Emotional
-• Marketing-grade
-• No repetition
-• End with CTA "{cta}"
+def generate_with_llama(prompt):
+    """
+    Uses Groq + LLaMA for product-aware slogan & long script generation
+    Few-shot prompting included
+    """
 
-AGENT 4 – Slogan Architect:
-Create ONE bold billboard slogan (max 8 words)
+    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
+    if not GROQ_API_KEY:
+        return "⚠️ Groq API key missing."
 
-Few-shot example:
-Product: Electric Bike
-Script:
-1. Silence isn’t empty — it’s powerful.
-2. The city moves when you do.
-3. Zero fuel. Pure freedom.
-4. Acceleration that thrills.
-5. Control in every curve.
-6. Designed for tomorrow.
-7. Ride smarter. Ride cleaner.
-8. The future is electric.
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-Return STRICT JSON:
-{{"slogan":"...", "script":"line1\\nline2\\n..."}}
+    # ---- FEW-SHOT PROMPTING ----
+    system_prompt = """
+You are an expert advertising copywriter AI.
+You generate creative, emotional, cinematic ad content.
+Never repeat slogans across different products.
+Always adapt tone to the product.
 """
 
-    res = client.chat.completions.create(
-        model="llama3-70b-8192",
-        messages=[{"role":"user","content":prompt}],
-        temperature=0.85
-    )
+    if "slogan" in prompt.lower():
+        user_prompt = f"""
+Product: {prompt}
 
-    return eval(res.choices[0].message.content)
+Generate ONE short, catchy, unique slogan (max 10 words).
+No repetition. No generic phrases.
+"""
 
-# -------------------------------------------------
-# VOICE AGENT
-# -------------------------------------------------
-def voice_agent(text):
-    tts = gTTS(text)
-    f = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    tts.save(f.name)
-    return f.name
+    elif "script" in prompt.lower():
+        user_prompt = f"""
+Product: {prompt}
 
-# -------------------------------------------------
-# BILLBOARD VISUAL AGENT
-# -------------------------------------------------
+Generate a 6–7 line cinematic voiceover script.
+Each line should be impactful and spoken-friendly.
+Avoid repetition. Make it emotional and persuasive.
+"""
+
+    else:
+        user_prompt = prompt
+
+    payload = {
+        "model": "llama3-8b-8192",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0.9,
+        "max_tokens": 300
+    }
+
+    try:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=15
+        )
+
+        result = response.json()
+        return result["choices"][0]["message"]["content"].strip()
+
+    except Exception as e:
+        return f"AI generation error: {e}"
+def generate_voiceover(text):
+    tts = gTTS(text=text, lang="en")
+    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    tts.save(temp_audio.name)
+    return temp_audio.name
+
 def generate_billboard(product, slogan, brand_color, cta, human_img=None, product_img=None):
     """
     Multimodal Billboard Generator
@@ -144,91 +198,333 @@ def generate_billboard(product, slogan, brand_color, cta, human_img=None, produc
     bg.convert("RGB").save(temp_img.name)
     return temp_img.name
 
-    # Neon Header
-    d.rectangle([0,0,1280,120],fill=(255,60,100))
-    d.text((40,25),product.upper(),font=big,fill="white")
+def generate_animated_human(human_img_path, audio_path):
+    API_KEY = st.secrets.get("did_api_key", "")
+    if not API_KEY:
+        st.warning("D-ID API key missing. Video disabled.")
+        return None
 
-    # Glow slogan
-    d.text((80,260),slogan,font=mid,fill=(0,255,220))
+    url = "https://api.d-id.com/talks"
 
-    # Decorative lights
-    for x in range(0,1280,70):
-        d.ellipse([x,650,x+20,670],fill=(255,255,100))
+    with open(human_img_path, "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode("utf-8")
+    with open(audio_path, "rb") as f:
+        audio_b64 = base64.b64encode(f.read()).decode("utf-8")
 
-    # CTA Button
-    d.rounded_rectangle([500,560,780,640],radius=35,fill=(0,200,120))
-    d.text((560,580),cta,font=btn,fill="black")
+    payload = {"source_image": img_b64, "driver_audio": audio_b64}
+    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type":"application/json"}
 
-    f = tempfile.NamedTemporaryFile(delete=False,suffix=".png")
-    img.save(f.name)
-    return f.name
+    resp = requests.post(url, json=payload, headers=headers).json()
 
-# -------------------------------------------------
-# VIDEO DIRECTOR AGENT
-# -------------------------------------------------
-def video_agent(image_path, audio_path, slogan):
-    base = ImageClip(image_path).set_duration(8)
+    if "result_url" in resp:
+        data = requests.get(resp["result_url"]).content
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        tmp.write(data)
+        return tmp.name
 
-    text = TextClip(
+    return None
+
+def add_product_overlay(talking_video_path, product_img_path, slogan):
+    if not MOVIEPY_OK:
+        st.warning("MoviePy missing. Video disabled.")
+        return None
+
+    from moviepy.editor import (
+        VideoFileClip, ImageClip, TextClip,
+        CompositeVideoClip, ColorClip, concatenate_videoclips
+    )
+
+    # ---------- LOAD TALKING VIDEO ----------
+    talk_clip = VideoFileClip(talking_video_path)
+
+    W, H = talk_clip.size
+
+    clips = []
+
+    # ==============================
+    # 🎬 SCENE 1 — HOOK (INTRO)
+    # ==============================
+    bg_intro = ColorClip(size=(W, H), color=(10, 10, 30)).set_duration(3)
+
+    text_intro = TextClip(
         slogan,
+        fontsize=70,
+        color='white',
+        font='DejaVu-Sans-Bold',
+        method='caption',
+        size=(W-200, None)
+    ).set_position('center').set_duration(3)
+
+    intro_scene = CompositeVideoClip([bg_intro, text_intro])
+    clips.append(intro_scene)
+
+    # ==============================
+    # 🎬 SCENE 2 — MAIN AD (TALKING HUMAN)
+    # ==============================
+    talk = talk_clip.resize(width=W)
+
+    layers = [talk]
+
+    # Product floating overlay
+    if product_img_path:
+        product_clip = (
+            ImageClip(product_img_path)
+            .set_duration(talk.duration)
+            .resize(height=220)
+            .set_position(("right", "bottom"))
+        )
+        layers.append(product_clip)
+
+    # Branding slogan overlay
+    slogan_clip = (
+        TextClip(
+            slogan,
+            fontsize=42,
+            color='yellow',
+            font='DejaVu-Sans-Bold',
+            method='caption',
+            size=(W-100, None)
+        )
+        .set_position(("center", 30))
+        .set_duration(talk.duration)
+    )
+
+    layers.append(slogan_clip)
+
+    main_scene = CompositeVideoClip(layers)
+    clips.append(main_scene)
+
+    # ==============================
+    # 🎬 SCENE 3 — CTA ENDING
+    # ==============================
+    bg_outro = ColorClip(size=(W, H), color=(30, 0, 0)).set_duration(3)
+
+    end_text = TextClip(
+        "Experience the Future.\nAct Now.",
         fontsize=60,
-        color="white",
-        method="caption",
-        size=(900,None)
-    ).set_position(("center",480)).set_duration(8)
+        color='white',
+        font='DejaVu-Sans-Bold',
+        method='caption',
+        size=(W-200, None)
+    ).set_position('center').set_duration(3)
 
-    audio = AudioFileClip(audio_path)
-    final = CompositeVideoClip([base,text]).set_audio(audio)
+    outro_layers = [bg_outro, end_text]
 
-    out = tempfile.NamedTemporaryFile(delete=False,suffix=".mp4")
-    final.write_videofile(out.name,fps=24,codec="libx264",audio_codec="aac")
-    return out.name
+    if product_img_path:
+        prod_big = (
+            ImageClip(product_img_path)
+            .set_duration(3)
+            .resize(height=320)
+            .set_position(("center", "bottom"))
+        )
+        outro_layers.append(prod_big)
 
-# -------------------------------------------------
-# UI – REAL APP FEEL
-# -------------------------------------------------
-st.title("🎬 AdForge AI Studio")
-st.markdown("**Agentic AI-powered Advertisement Creation Platform**")
+    outro_scene = CompositeVideoClip(outro_layers)
+    clips.append(outro_scene)
 
-st.sidebar.header("📌 Campaign Settings")
-product = st.sidebar.text_input("Product / Brand")
-audience = st.sidebar.selectbox("Target Audience",["General","Youth","Corporate","Luxury"])
-tone = st.sidebar.selectbox("Tone",["Emotional","Corporate","Luxury","Dramatic"])
-cta = st.sidebar.selectbox("Call To Action",["Buy Now","Experience It","Upgrade Today"])
+    # ==============================
+    # 🎬 FINAL COMPOSITION
+    # ==============================
+    final_video = concatenate_videoclips(clips, method="compose")
 
-st.markdown("""
-### 🔍 What this app does
-• Uses **multi-agent LLaMA architecture**  
-• Generates **long-form cinematic scripts**  
-• Designs **decorative billboards**  
-• Produces **AI voiceover**  
-• Renders a **real advertisement video**  
+    tmp_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    final_video.write_videofile(
+        tmp_final.name,
+        fps=24,
+        codec="libx264",
+        audio_codec="aac"
+    )
 
-_No paid video APIs. No shortcuts._
-""")
+    return tmp_final.name
 
-if st.button("🚀 Generate Full AI Advertisement"):
-    if not product:
-        st.error("Product name required")
-    else:
-        with st.spinner("Multi-agent system collaborating..."):
-            data = agentic_campaign(product,audience,tone,cta)
+# ---------------- PROFILE CREATION ----------------
+if not st.session_state.profile_created:
 
-        st.subheader("🎯 AI Slogan")
-        st.success(data["slogan"])
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
-        st.subheader("📝 Cinematic Script (8–10 lines)")
-        st.text(data["script"])
+    st.markdown("""
+    <div class="center">
+        <img src="https://i.postimg.cc/3rz01J48/Screenshot_2026_01_23_021409.png" width="100">
+    </div>
+    """, unsafe_allow_html=True)
 
-        audio = voice_agent(data["script"])
-        st.audio(audio)
+    st.markdown('<div class="section-title center">👤 Create Your Profile</div>', unsafe_allow_html=True)
 
-        billboard = billboard_agent(product,data["slogan"],cta)
-        st.image(billboard,use_column_width=True)
+    name = st.text_input("Name")
+    email = st.text_input("Email")
+    brand = st.text_input("Brand Name")
+    gender = st.selectbox("Gender", ["Male","Female"])
 
-        video = video_agent(billboard,audio,data["slogan"])
-        st.subheader("🎥 AI Advertisement Video")
-        st.video(video)
+    if st.button("Start Creating Ads 🚀"):
+        if not name or not email or not brand:
+            st.error("Please fill all fields.")
+        else:
+            st.session_state.profile_created = True
+            st.session_state.user_name = name
+            st.session_state.user_email = email
+            st.session_state.user_brand = brand
+            st.session_state.user_gender = gender
+            st.experimental_rerun()
 
-st.markdown("---")
-st.caption("Built with Agenting AI • Hackathon Edition • AdForge AI Studio")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
+
+# ---------------- PROFILE ICON ----------------
+if st.session_state.user_gender == "Male":
+    profile_icon = "https://i.postimg.cc/5tTtnXH0/Screenshot_2026_01_23_010056.png"
+else:
+    profile_icon = "https://i.postimg.cc/PrVnmBvh/Screenshot_2026_01_23_010324.png"
+
+st.markdown(f"""
+<div class="profile-icon">
+    <img src="{profile_icon}" width="60">
+</div>
+""", unsafe_allow_html=True)
+
+# ---------------- SIDEBAR ----------------
+st.sidebar.markdown(f"👋 Hello, {st.session_state.user_name}")
+menu = st.sidebar.radio("📌 Navigation", ["Home","Ad Studio","Billboard","Settings","License"])
+
+# ---------------- HOME ----------------
+if menu == "Home":
+
+    st.markdown('<div class="main-title">AdForge AI Studio</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Create cinematic ads in seconds using AI</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("### 🚀 Features")
+    st.markdown("""
+    • 🎬 AI Video Ads  
+    • 🖼 Smart Billboard Generator  
+    • 🎙 Voiceover AI  
+    • ✍ Script Generator  
+    • 🎨 Brand Styling  
+    • 📊 Audience Targeting  
+    • ⚡ Hackathon-ready UX  
+    """)
+    st.markdown("### 🔧 How It Works")
+    st.markdown("""
+    1️⃣ Enter your product  
+    2️⃣ Generate slogan + script  
+    3️⃣ Upload images  
+    4️⃣ Generate poster or video  
+    5️⃣ Download and share  
+    """)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- AD STUDIO ----------------
+elif menu == "Ad Studio":
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🎬 Ad Studio</div>', unsafe_allow_html=True)
+
+    product = st.text_input("Product / Topic")
+    st.session_state.audience = st.selectbox("Audience", ["General","Youth","Corporate","Luxury"])
+    st.session_state.tone = st.selectbox("Ad Tone", ["Corporate","Funny","Dramatic","Luxury"])
+    st.session_state.cta = st.selectbox("Call-To-Action", ["Buy Now","Shop Today","Learn More","Download App"])
+    st.session_state.brand_color = st.color_picker("Brand Color", st.session_state.brand_color)
+
+    if st.button("✨ Generate Slogan + Script"):
+        if not product:
+            st.error("Enter a product.")
+        else:
+            st.session_state.slogan = generate_with_llama(f"slogan for {product}")
+            st.session_state.script = generate_with_llama(f"script for {product}")
+            st.success("AI content generated!")
+
+    st.text_input("AI Slogan", value=st.session_state.slogan or "")
+    script = st.text_area("AI Script", value=st.session_state.script or "", height=120)
+
+    st.markdown("### 🧑 Upload Human Image")
+    human = st.file_uploader("Human Image", type=["png","jpg","jpeg"])
+    if human:
+        tmp_human = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        tmp_human.write(human.read())
+        st.session_state.human_img = tmp_human.name
+
+    st.markdown("### 🥤 Upload Product Image")
+    prod = st.file_uploader("Product Image", type=["png","jpg","jpeg"])
+    if prod:
+        tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        tmp_prod.write(prod.read())
+        st.session_state.product_img = tmp_prod.name
+
+    if st.button("🔊 Generate Voiceover"):
+        if not script:
+            st.error("Generate script first.")
+        else:
+            st.session_state.audio = generate_voiceover(script)
+            st.audio(st.session_state.audio)
+            st.success("Voiceover ready!")
+
+    if st.button("🎥 Generate AI Video"):
+        if not st.session_state.audio or not st.session_state.human_img:
+            st.error("Upload human image + generate voice.")
+        else:
+            talking_video = generate_animated_human(st.session_state.human_img, st.session_state.audio)
+            if talking_video:
+                final_video = add_product_overlay(talking_video, st.session_state.product_img, st.session_state.slogan)
+                if final_video:
+                    st.video(final_video)
+                    st.success("AI Video Generated!")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- BILLBOARD ----------------
+elif menu == "Billboard":
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🖼 Billboard Generator</div>', unsafe_allow_html=True)
+
+    if st.button("🎨 Generate Decorative Billboard"):
+        if not st.session_state.slogan:
+            st.error("Generate slogan first.")
+        else:
+            img = generate_billboard(
+                product,
+                st.session_state.slogan,
+                st.session_state.brand_color,
+                st.session_state.cta,
+                st.session_state.human_img,
+                st.session_state.product_img
+            )
+            st.session_state.billboard_img = img
+            st.image(img, use_column_width=True)
+            st.success("Billboard generated!")
+
+    if st.session_state.billboard_img:
+        with open(st.session_state.billboard_img, "rb") as f:
+            st.download_button("⬇ Download Billboard", f, file_name="adforge_billboard.png")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- SETTINGS ----------------
+elif menu == "Settings":
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
+
+    st.markdown("• Video resolution (coming soon)")
+    st.markdown("• Background music (coming soon)")
+    st.markdown("• Voice accents (coming soon)")
+    st.markdown("• Ad history (coming soon)")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- LICENSE ----------------
+elif menu == "License":
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📜 License & Info</div>', unsafe_allow_html=True)
+
+    st.markdown(f"""
+    AdForge AI Studio – Hackathon Edition  
+    User: {st.session_state.user_name}  
+    Email: {st.session_state.user_email}  
+    Brand: {st.session_state.user_brand}  
+    """)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- FOOTER ----------------
+st.markdown('<div class="footer-nav">🚀 AdForge AI Studio — Hackathon Build</div>', unsafe_allow_html=True)
