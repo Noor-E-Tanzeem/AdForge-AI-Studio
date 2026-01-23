@@ -10,8 +10,13 @@ import random
 # ---------- SAFE MOVIEPY IMPORT ----------
 try:
     from moviepy.editor import (
-        ImageClip, VideoFileClip, CompositeVideoClip,
-        TextClip, ColorClip, concatenate_videoclips
+    ImageClip,
+    VideoFileClip,
+    CompositeVideoClip,
+    ColorClip,
+    concatenate_videoclips,
+    AudioFileClip
+)
     )
     MOVIEPY_OK = True
 except Exception:
@@ -134,7 +139,7 @@ def generate_voiceover(text):
     return tmp.name
 
 
-def generate_billboard(product, slogan, brand_color, cta, human_img=None, product_img=None):
+def generate_billboard(product, slogan, brand_color, cta, product_img=None):
     bg = Image.new("RGB", (1280, 720), (20, 20, 40))
     draw = ImageDraw.Draw(bg)
 
@@ -145,11 +150,10 @@ def generate_billboard(product, slogan, brand_color, cta, human_img=None, produc
     except:
         font_title = font_slogan = font_cta = ImageFont.load_default()
 
-    draw.rectangle([0, 0, 1280, 140], fill=(60, 90, 160))
     draw.text((40, 40), product.upper(), fill="white", font=font_title)
-    draw.text((40, 180), slogan, fill="yellow", font=font_slogan)
+    draw.text((40, 160), slogan, fill="yellow", font=font_slogan)
 
-    draw.rounded_rectangle([900, 560, 1220, 650], radius=30, fill=(255, 80, 80))
+    draw.rectangle([900, 560, 1220, 650], fill=(255, 80, 80))
     draw.text((940, 585), cta, fill="white", font=font_cta)
 
     if product_img:
@@ -180,26 +184,43 @@ def generate_billboard(product, slogan, brand_color, cta, human_img=None, produc
     )
 
     return img
+    def make_text_image(text, size=(1100, 200)):
+    img = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
 
+    try:
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
+    except:
+        font = ImageFont.load_default()
 
-def generate_product_ad_video(product_img_path, audio_path, slogan):
-    if not MOVIEPY_OK:
-        st.error("MoviePy not available")
-        return None
+    bbox = draw.textbbox((0, 0), text, font=font)
+    w = bbox[2] - bbox[0]
+    h = bbox[3] - bbox[1]
 
+    draw.text(
+        ((size[0] - w) // 2, (size[1] - h) // 2),
+        text,
+        font=font,
+        fill=(255, 215, 0, 255)
+    )
+
+    return img
+    def generate_product_ad_video(product_img_path, audio_path, slogan):
     audio = AudioFileClip(audio_path)
     duration = audio.duration
 
-    bg = ColorClip(size=(1280, 720), color=(15, 15, 30)).set_duration(duration)
+    bg = ColorClip(
+        size=(1280, 720),
+        color=(15, 15, 30)
+    ).set_duration(duration)
 
     product = (
         ImageClip(product_img_path)
         .resize(height=360)
-        .set_position(lambda t: (460 + int(60 * t), 220))
+        .set_position(lambda t: (460 + int(80 * t), 220))
         .set_duration(duration)
     )
 
-    # ---- TEXT VIA PIL (SAFE) ----
     text_img = make_text_image(slogan.upper())
     text_clip = (
         ImageClip(text_img)
