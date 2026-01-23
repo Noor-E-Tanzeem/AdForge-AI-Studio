@@ -515,14 +515,14 @@ if menu == "Home":
 
     with p1:
         st.image(
-            "https://i.postimg.cc/YOUR-BILLBOARD-SAMPLE.png",
+            "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
             caption="AI-Generated Billboard",
             use_column_width=True
         )
 
     with p2:
         st.image(
-            "https://i.postimg.cc/YOUR-VIDEO-SAMPLE.png",
+            "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
             caption="AI Video Advertisement",
             use_column_width=True
         )
