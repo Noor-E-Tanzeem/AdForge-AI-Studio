@@ -9,10 +9,10 @@ import random
 
 # ---------- SAFE MOVIEPY IMPORT ----------
 try:
-   from moviepy.editor import (
-    ImageClip, VideoFileClip, CompositeVideoClip,
-    TextClip, ColorClip, concatenate_videoclips
-)
+    from moviepy.editor import (
+        ImageClip, VideoFileClip, CompositeVideoClip,
+        TextClip, ColorClip, concatenate_videoclips
+    )
     MOVIEPY_OK = True
 except Exception:
     MOVIEPY_OK = False
