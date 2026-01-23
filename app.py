@@ -194,7 +194,7 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
     audio = AudioFileClip(audio_path)
     total_duration = audio.duration
 
-    # ---- timing ----
+    # -------- Scene timing --------
     t1 = 2
     t2 = 3
     t3 = 3
@@ -214,7 +214,7 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
         ImageClip(tmp_hook.name)
         .set_position("center")
         .set_duration(t1)
-        .fadein(0.5)
+        .fadein(0.6)
     )
 
     scene1 = CompositeVideoClip([scene1_bg, hook_clip])
@@ -237,10 +237,9 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
     product_clip = (
         ImageClip(tmp_prod.name)
         .set_position(lambda t: (
-            400 + int(120 * (t / t2) ** 2),
-            220 + int(6 * (-1) ** int(t * 2))
+            400 + int(140 * (t / t2)),   # slide-in
+            220 + int(6 * (-1) ** int(t * 2))  # subtle float
         ))
-        .resize(lambda t: 1.0 + 0.03 * (t / t2))
         .set_duration(t2)
     )
 
@@ -250,7 +249,7 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
 
     slogan_clip = (
         ImageClip(tmp_slogan.name)
-        .set_position(lambda t: ("center", int(120 - 40 * min(t, 1))))
+        .set_position(lambda t: ("center", int(130 - 40 * min(t, 1))))
         .set_duration(t2)
         .fadein(0.6)
     )
@@ -281,7 +280,7 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
         ImageClip(tmp_value.name)
         .set_position("center")
         .set_duration(t3)
-        .fadein(0.5)
+        .fadein(0.6)
     )
 
     scene3 = CompositeVideoClip([scene3_bg, value_clip])
@@ -300,12 +299,12 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
         ImageClip(tmp_cta.name)
         .set_position("center")
         .set_duration(t4)
-        .fadein(0.5)
+        .fadein(0.6)
     )
 
     scene4 = CompositeVideoClip([scene4_bg, cta_clip])
 
-    # ================= FINAL =================
+    # ================= FINAL VIDEO =================
     final_video = concatenate_videoclips(
         [scene1, scene2, scene3, scene4],
         method="compose"
