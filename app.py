@@ -191,6 +191,7 @@ def make_text_image(text, size=(1100, 200)):
 
 
 def generate_product_ad_video(product_img_path, audio_path, slogan):
+    # ---- load audio ----
     audio = AudioFileClip(audio_path)
     duration = audio.duration
 
@@ -200,35 +201,49 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
         color=(15, 15, 30)
     ).set_duration(duration)
 
-    # ---- SAFE PRODUCT RESIZE USING PIL ----
+    # ==================================================
+    # SAFE PRODUCT IMAGE RESIZE (PIL, NOT MOVIEPY)
+    # ==================================================
     img = Image.open(product_img_path).convert("RGBA")
     w, h = img.size
+
     new_h = 360
     new_w = int((new_h / h) * w)
+
     img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    img.save(tmp_img.name)
+    tmp_product = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    img.save(tmp_product.name)
 
-    product = (
-        ImageClip(tmp_img.name)
-        .set_position(lambda t: (460 + int(80 * t), 220))
+    product_clip = (
+        ImageClip(tmp_product.name)
+        .set_position(lambda t: (460 + int(80 * t), 220))  # moving right
         .set_duration(duration)
     )
 
-    # ---- TEXT ----
+    # ==================================================
+    # SAFE TEXT IMAGE (BIG DECORATIVE CAPTION)
+    # ==================================================
     text_img = make_text_image(slogan.upper())
+
+    tmp_text = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    text_img.save(tmp_text.name)
+
     text_clip = (
-        ImageClip(text_img)
+        ImageClip(tmp_text.name)
         .set_position(("center", 60))
         .set_duration(duration)
     )
 
-    final = CompositeVideoClip([bg, product, text_clip]).set_audio(audio)
+    # ---- compose final video ----
+    final = CompositeVideoClip(
+        [bg, product_clip, text_clip]
+    ).set_audio(audio)
 
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    # ---- export ----
+    tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final.write_videofile(
-        tmp.name,
+        tmp_video.name,
         fps=24,
         codec="libx264",
         audio_codec="aac",
@@ -236,7 +251,7 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
         logger=None
     )
 
-    return tmp.name
+    return tmp_video.name
 # ---------------- PROFILE CREATION ----------------
 if not st.session_state.profile_created:
 
