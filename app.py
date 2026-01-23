@@ -191,58 +191,98 @@ def make_text_image(text, size=(1100, 200)):
 
 
 def generate_product_ad_video(product_img_path, audio_path, slogan):
-    # ---- load audio ----
     audio = AudioFileClip(audio_path)
-    duration = audio.duration
+    total_duration = audio.duration
 
-    # ---- background ----
-    bg = ColorClip(
-        size=(1280, 720),
-        color=(15, 15, 30)
-    ).set_duration(duration)
+    # ---- split time across scenes ----
+    t1 = 2
+    t2 = 3
+    t3 = 3
+    t4 = max(2, total_duration - (t1 + t2 + t3))
 
-    # ==================================================
-    # SAFE PRODUCT IMAGE RESIZE (PIL, NOT MOVIEPY)
-    # ==================================================
+    # ================= SCENE 1 — HOOK =================
+    scene1_bg = ColorClip((1280, 720), color=(10, 10, 20)).set_duration(t1)
+
+    hook_text = make_text_image("MADE FOR REAL LIFE")
+    tmp_hook = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    hook_text.save(tmp_hook.name)
+
+    hook_clip = (
+        ImageClip(tmp_hook.name)
+        .set_position("center")
+        .set_duration(t1)
+    )
+
+    scene1 = CompositeVideoClip([scene1_bg, hook_clip])
+
+    # ================= SCENE 2 — PRODUCT REVEAL =================
     img = Image.open(product_img_path).convert("RGBA")
     w, h = img.size
-
     new_h = 360
     new_w = int((new_h / h) * w)
-
     img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-    tmp_product = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    img.save(tmp_product.name)
+    tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    img.save(tmp_prod.name)
+
+    scene2_bg = ColorClip((1280, 720), color=(20, 20, 40)).set_duration(t2)
 
     product_clip = (
-        ImageClip(tmp_product.name)
-        .set_position(lambda t: (460 + int(80 * t), 220))  # moving right
-        .set_duration(duration)
+        ImageClip(tmp_prod.name)
+        .set_position(lambda t: (400 + int(120 * t), 220))
+        .set_duration(t2)
     )
 
-    # ==================================================
-    # SAFE TEXT IMAGE (BIG DECORATIVE CAPTION)
-    # ==================================================
-    text_img = make_text_image(slogan.upper())
+    slogan_img = make_text_image(slogan.upper())
+    tmp_slogan = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    slogan_img.save(tmp_slogan.name)
 
-    tmp_text = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    text_img.save(tmp_text.name)
-
-    text_clip = (
-        ImageClip(tmp_text.name)
+    slogan_clip = (
+        ImageClip(tmp_slogan.name)
         .set_position(("center", 60))
-        .set_duration(duration)
+        .set_duration(t2)
     )
 
-    # ---- compose final video ----
-    final = CompositeVideoClip(
-        [bg, product_clip, text_clip]
+    scene2 = CompositeVideoClip([scene2_bg, product_clip, slogan_clip])
+
+    # ================= SCENE 3 — VALUE =================
+    scene3_bg = ColorClip((1280, 720), color=(30, 30, 50)).set_duration(t3)
+
+    value_text = make_text_image("SIMPLE. STRONG. RELIABLE.")
+    tmp_value = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    value_text.save(tmp_value.name)
+
+    value_clip = (
+        ImageClip(tmp_value.name)
+        .set_position("center")
+        .set_duration(t3)
+    )
+
+    scene3 = CompositeVideoClip([scene3_bg, value_clip])
+
+    # ================= SCENE 4 — CTA =================
+    scene4_bg = ColorClip((1280, 720), color=(0, 0, 0)).set_duration(t4)
+
+    cta_text = make_text_image("EXPERIENCE IT TODAY")
+    tmp_cta = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    cta_text.save(tmp_cta.name)
+
+    cta_clip = (
+        ImageClip(tmp_cta.name)
+        .set_position("center")
+        .set_duration(t4)
+    )
+
+    scene4 = CompositeVideoClip([scene4_bg, cta_clip])
+
+    # ================= FINAL VIDEO =================
+    final_video = concatenate_videoclips(
+        [scene1, scene2, scene3, scene4],
+        method="compose"
     ).set_audio(audio)
 
-    # ---- export ----
     tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    final.write_videofile(
+    final_video.write_videofile(
         tmp_video.name,
         fps=24,
         codec="libx264",
