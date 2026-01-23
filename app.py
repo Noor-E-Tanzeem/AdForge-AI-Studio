@@ -134,7 +134,6 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ---------------- UTILS ----------------
 
 # ---------------- UTILS ----------------
 
@@ -398,15 +397,48 @@ if st.session_state.user_gender == "Male":
 else:
     profile_icon = "https://i.postimg.cc/PrVnmBvh/Screenshot_2026_01_23_010324.png"
 
-st.markdown(f"""
-<div class="profile-icon">
-    <img src="{profile_icon}" width="60">
-</div>
-""", unsafe_allow_html=True)
 
 # ---------------- SIDEBAR ----------------
-st.sidebar.markdown(f"👋 Hello, {st.session_state.user_name}")
-menu = st.sidebar.radio("📌 Navigation", ["Home","Ad Studio","Billboard","Settings","License"])
+st.sidebar.markdown(
+    f"""
+    <div style="
+        text-align:center;
+        padding:20px 10px 10px 10px;
+        margin-bottom:10px;
+        border-bottom:1px solid #2b2f3a;
+    ">
+        <img src="{profile_icon}"
+             style="
+             width:80px;
+             height:80px;
+             object-fit:cover;
+             border-radius:50%;
+             border:3px solid #4da6ff;
+             box-shadow:0 6px 16px rgba(0,0,0,0.6);
+             ">
+        <div style="
+            margin-top:10px;
+            font-weight:700;
+            font-size:16px;
+            color:white;
+        ">
+            {st.session_state.user_name}
+        </div>
+        <div style="
+            font-size:12px;
+            color:#9aa4b2;
+        ">
+            {st.session_state.user_brand}
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+menu = st.sidebar.radio(
+    "📌 Navigation",
+    ["Home", "Ad Studio", "Billboard", "Settings", "License"]
+)
 
 # ---------------- HOME ----------------
 if menu == "Home":
