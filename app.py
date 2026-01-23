@@ -64,45 +64,24 @@ def load_image(url):
     return Image.open(BytesIO(response.content))
 
 def generate_with_llama(prompt):
-    """
-    Uses Groq + LLaMA for product-aware slogan & long script generation
-    Few-shot prompting included
-    """
-
     GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
     if not GROQ_API_KEY:
-        return "⚠️ Groq API key missing."
+        return fallback_copy(prompt)
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
 
-    # ---- FEW-SHOT PROMPTING ----
-    system_prompt = """
-You are an expert advertising copywriter AI.
-You generate creative, emotional, cinematic ad content.
-Never repeat slogans across different products.
-Always adapt tone to the product.
-"""
+    system_prompt = (
+        "You are an expert advertising copywriter. "
+        "Generate creative, product-specific, non-generic ad content."
+    )
 
     if "slogan" in prompt.lower():
-        user_prompt = f"""
-Product: {prompt}
-
-Generate ONE short, catchy, unique slogan (max 10 words).
-No repetition. No generic phrases.
-"""
-
+        user_prompt = f"{prompt}\nGenerate ONE catchy slogan (max 10 words)."
     elif "script" in prompt.lower():
-        user_prompt = f"""
-Product: {prompt}
-
-Generate a 6–7 line cinematic voiceover script.
-Each line should be impactful and spoken-friendly.
-Avoid repetition. Make it emotional and persuasive.
-"""
-
+        user_prompt = f"{prompt}\nGenerate a 6–7 line cinematic voiceover script."
     else:
         user_prompt = prompt
 
@@ -113,7 +92,7 @@ Avoid repetition. Make it emotional and persuasive.
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0.9,
-        "max_tokens": 300
+        "max_tokens": 350
     }
 
     try:
@@ -121,14 +100,35 @@ Avoid repetition. Make it emotional and persuasive.
             "https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             json=payload,
-            timeout=15
+            timeout=20
         )
 
-        result = response.json()
-        return result["choices"][0]["message"]["content"].strip()
+        data = response.json()
+        if "choices" not in data:
+            return fallback_copy(prompt)
 
-    except Exception as e:
-        return f"AI generation error: {e}"
+        return data["choices"][0]["message"]["content"].strip()
+
+    except Exception:
+        return fallback_copy(prompt)
+        def fallback_copy(prompt):
+    if "slogan" in prompt.lower():
+        product = prompt.replace("slogan for", "").strip()
+        return f"{product.capitalize()} that’s ready when you are."
+
+    if "script" in prompt.lower():
+        product = prompt.replace("script for", "").strip()
+        return (
+            f"This is not just {product}.\n"
+            f"It’s designed for real-life moments.\n"
+            f"Built to perform when it matters.\n"
+            f"Simple, strong, and dependable.\n"
+            f"Wherever you go, stay confident.\n"
+            f"Prepared for the unexpected.\n"
+            f"Choose reliability."
+        )
+
+    return "Smart. Simple. Reliable."
 def generate_voiceover(text):
     tts = gTTS(text=text, lang="en")
     temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
