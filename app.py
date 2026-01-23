@@ -25,93 +25,62 @@ except Exception:
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="AdForge AI Studio", page_icon="🤖", layout="wide")
 
-# ---------------- CSS ----------------
 st.markdown("""
 <style>
-
-/* ---------- GLOBAL ---------- */
-body {
-    background-color: #0e0f14;
+/* Sidebar base */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0e0f14, #12141c);
 }
 
-/* ---------- TYPOGRAPHY ---------- */
-.main-title {
-    font-size: 46px;
-    font-weight: 900;
-    color: #ffffff;
-}
-
-.sub-title {
-    font-size: 20px;
-    color: #cfcfcf;
-}
-
-/* ---------- CARDS & SECTIONS ---------- */
-.card {
-    background: #171a23;
-    border-radius: 18px;
-    padding: 28px;
-    color: #ffffff;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-}
-
-.section-title {
-    font-size: 28px;
-    font-weight: 800;
-    color: #4da6ff;
-}
-
-.feature-box {
-    background: #1e2230;
-    border-radius: 14px;
-    padding: 20px;
-}
-
-.small-text {
-    color: #dddddd;
-    font-size: 16px;
-    line-height: 1.6;
-}
-
-/* ---------- FOOTER ---------- */
-.footer-nav {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    background: #171a23;
-    padding: 12px;
+/* Profile card */
+.sidebar-profile {
     text-align: center;
-    color: #aaaaaa;
-    font-size: 14px;
-    border-top: 1px solid #2b2f3a;
-    z-index: 999;
+    padding: 18px 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #2b2f3a;
+    animation: fadeIn 0.6s ease-in-out;
 }
 
-/* ---------- UTIL ---------- */
-.center {
-    text-align: center;
-}
-
-/* ---------- PROFILE ICON (FIXED + MOBILE SAFE) ---------- */
-.profile-icon {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 1000;
-}
-
-.profile-icon img {
-    width: 56px;
-    height: 56px;
+.sidebar-profile img {
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
-    border: 2px solid #4da6ff;
-    background: #111;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    object-fit: cover;
+    border: 3px solid #4da6ff;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
 }
 
+.sidebar-name {
+    margin-top: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.sidebar-brand {
+    font-size: 12px;
+    color: #9aa4b2;
+}
+
+/* Badge */
+.badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #4da6ff, #6f7cff);
+    color: white;
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 </style>
 """, unsafe_allow_html=True)
-
 # ---------------- SESSION DEFAULTS ----------------
 defaults = {
     "profile_created": False,
@@ -401,45 +370,38 @@ else:
 # ---------------- SIDEBAR ----------------
 st.sidebar.markdown(
     f"""
-    <div style="
-        text-align:center;
-        padding:20px 10px 10px 10px;
-        margin-bottom:10px;
-        border-bottom:1px solid #2b2f3a;
-    ">
-        <img src="{profile_icon}"
-             style="
-             width:80px;
-             height:80px;
-             object-fit:cover;
-             border-radius:50%;
-             border:3px solid #4da6ff;
-             box-shadow:0 6px 16px rgba(0,0,0,0.6);
-             ">
-        <div style="
-            margin-top:10px;
-            font-weight:700;
-            font-size:16px;
-            color:white;
-        ">
+    <div class="sidebar-profile">
+        <img src="{profile_icon}">
+        <div class="sidebar-name">
             {st.session_state.user_name}
         </div>
-        <div style="
-            font-size:12px;
-            color:#9aa4b2;
-        ">
+        <div class="sidebar-brand">
             {st.session_state.user_brand}
+        </div>
+        <div class="badge">
+            🚀 Hackathon
         </div>
     </div>
     """,
     unsafe_allow_html=True
 )
 
+# ---- DROPDOWN MENU ----
+profile_action = st.sidebar.selectbox(
+    "Account",
+    ["— Select —", "⚙ Settings", "🚪 Logout"],
+    label_visibility="collapsed"
+)
+
+if profile_action == "🚪 Logout":
+    for k in list(st.session_state.keys()):
+        del st.session_state[k]
+    st.rerun()
+
 menu = st.sidebar.radio(
     "📌 Navigation",
     ["Home", "Ad Studio", "Billboard", "Settings", "License"]
 )
-
 # ---------------- HOME ----------------
 if menu == "Home":
 
