@@ -194,114 +194,118 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
     audio = AudioFileClip(audio_path)
     total_duration = audio.duration
 
-    # ---- split time across scenes ----
+    # ---- timing ----
     t1 = 2
     t2 = 3
     t3 = 3
     t4 = max(2, total_duration - (t1 + t2 + t3))
 
     # ================= SCENE 1 — HOOK =================
-    scene1_bg = ColorClip((1280, 720), color=(10, 10, 20)).set_duration(t1)
+    scene1_bg = ColorClip(
+        size=(1280, 720),
+        color=(10, 10, 20)
+    ).set_duration(t1)
 
-    hook_text = make_text_image("MADE FOR REAL LIFE")
+    hook_img = make_text_image("MADE FOR REAL LIFE")
     tmp_hook = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    hook_text.save(tmp_hook.name)
+    hook_img.save(tmp_hook.name)
 
     hook_clip = (
         ImageClip(tmp_hook.name)
         .set_position("center")
         .set_duration(t1)
+        .fadein(0.5)
     )
 
     scene1 = CompositeVideoClip([scene1_bg, hook_clip])
 
-   # ================= SCENE 2 — PRODUCT REVEAL =================
+    # ================= SCENE 2 — PRODUCT REVEAL =================
+    img = Image.open(product_img_path).convert("RGBA")
+    w, h = img.size
+    new_h = 360
+    new_w = int((new_h / h) * w)
+    img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-# --- Resize product safely with PIL ---
-img = Image.open(product_img_path).convert("RGBA")
-w, h = img.size
-new_h = 360
-new_w = int((new_h / h) * w)
-img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    img.save(tmp_prod.name)
 
-tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-img.save(tmp_prod.name)
+    scene2_bg = ColorClip(
+        size=(1280, 720),
+        color=(20, 20, 40)
+    ).set_duration(t2)
 
-# --- Background ---
-scene2_bg = ColorClip(
-    size=(1280, 720),
-    color=(20, 20, 40)
-).set_duration(t2)
-
-# --- Product motion (cinematic) ---
-product_clip = ImageClip(tmp_prod.name)
-product_clip = product_clip.set_position(
-    lambda t: (
-        400 + int(120 * (t / t2) ** 2),   # ease-in motion
-        220 + int(6 * (-1) ** int(t * 2)) # subtle float
+    product_clip = (
+        ImageClip(tmp_prod.name)
+        .set_position(lambda t: (
+            400 + int(120 * (t / t2) ** 2),
+            220 + int(6 * (-1) ** int(t * 2))
+        ))
+        .resize(lambda t: 1.0 + 0.03 * (t / t2))
+        .set_duration(t2)
     )
-)
-product_clip = product_clip.resize(
-    lambda t: 1.0 + 0.03 * (t / t2)
-)
-product_clip = product_clip.set_duration(t2)
 
-# --- Slogan text (PIL-rendered, safe) ---
-slogan_img = make_text_image(slogan.upper())
-tmp_slogan = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-slogan_img.save(tmp_slogan.name)
+    slogan_img = make_text_image(slogan.upper())
+    tmp_slogan = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    slogan_img.save(tmp_slogan.name)
 
-slogan_clip = ImageClip(tmp_slogan.name)
-slogan_clip = slogan_clip.set_position(
-    lambda t: ("center", int(120 - 40 * min(t, 1)))
-)
-slogan_clip = slogan_clip.fadein(0.6)
-slogan_clip = slogan_clip.set_duration(t2)
+    slogan_clip = (
+        ImageClip(tmp_slogan.name)
+        .set_position(lambda t: ("center", int(120 - 40 * min(t, 1))))
+        .set_duration(t2)
+        .fadein(0.6)
+    )
 
-# --- Dark overlay for depth ---
-overlay = ColorClip(
-    size=(1280, 720),
-    color=(0, 0, 0)
-).set_opacity(0.25).set_duration(t2)
+    overlay = ColorClip(
+        size=(1280, 720),
+        color=(0, 0, 0)
+    ).set_opacity(0.25).set_duration(t2)
 
-# --- Final Scene 2 composition ---
-scene2 = CompositeVideoClip([
-    scene2_bg,
-    overlay,
-    product_clip,
-    slogan_clip
-])
+    scene2 = CompositeVideoClip([
+        scene2_bg,
+        overlay,
+        product_clip,
+        slogan_clip
+    ])
+
     # ================= SCENE 3 — VALUE =================
-    scene3_bg = ColorClip((1280, 720), color=(30, 30, 50)).set_duration(t3)
+    scene3_bg = ColorClip(
+        size=(1280, 720),
+        color=(30, 30, 50)
+    ).set_duration(t3)
 
-    value_text = make_text_image("SIMPLE. STRONG. RELIABLE.")
+    value_img = make_text_image("SIMPLE. STRONG. RELIABLE.")
     tmp_value = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    value_text.save(tmp_value.name)
+    value_img.save(tmp_value.name)
 
     value_clip = (
         ImageClip(tmp_value.name)
         .set_position("center")
         .set_duration(t3)
+        .fadein(0.5)
     )
 
     scene3 = CompositeVideoClip([scene3_bg, value_clip])
 
     # ================= SCENE 4 — CTA =================
-    scene4_bg = ColorClip((1280, 720), color=(0, 0, 0)).set_duration(t4)
+    scene4_bg = ColorClip(
+        size=(1280, 720),
+        color=(0, 0, 0)
+    ).set_duration(t4)
 
-    cta_text = make_text_image("EXPERIENCE IT TODAY")
+    cta_img = make_text_image("EXPERIENCE IT TODAY")
     tmp_cta = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    cta_text.save(tmp_cta.name)
+    cta_img.save(tmp_cta.name)
 
     cta_clip = (
         ImageClip(tmp_cta.name)
         .set_position("center")
         .set_duration(t4)
+        .fadein(0.5)
     )
 
     scene4 = CompositeVideoClip([scene4_bg, cta_clip])
 
-    # ================= FINAL VIDEO =================
+    # ================= FINAL =================
     final_video = concatenate_videoclips(
         [scene1, scene2, scene3, scene4],
         method="compose"
@@ -318,38 +322,6 @@ scene2 = CompositeVideoClip([
     )
 
     return tmp_video.name
-# ---------------- PROFILE CREATION ----------------
-if not st.session_state.profile_created:
-
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="center">
-        <img src="https://i.postimg.cc/3rz01J48/Screenshot_2026_01_23_021409.png" width="100">
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="section-title center">👤 Create Your Profile</div>', unsafe_allow_html=True)
-
-    name = st.text_input("Name")
-    email = st.text_input("Email")
-    brand = st.text_input("Brand Name")
-    gender = st.selectbox("Gender", ["Male","Female"])
-
-    if st.button("Start Creating Ads 🚀"):
-        if not name or not email or not brand:
-            st.error("Please fill all fields.")
-        else:
-            st.session_state.profile_created = True
-            st.session_state.user_name = name
-            st.session_state.user_email = email
-            st.session_state.user_brand = brand
-            st.session_state.user_gender = gender
-            st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.stop()
-
 # ---------------- PROFILE ICON ----------------
 if st.session_state.user_gender == "Male":
     profile_icon = "https://i.postimg.cc/5tTtnXH0/Screenshot_2026_01_23_010056.png"
