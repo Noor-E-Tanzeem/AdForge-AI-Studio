@@ -59,57 +59,14 @@ for k, v in defaults.items():
         st.session_state[k] = v
 
 # ---------------- UTILS ----------------
+# ---------------- UTILS ----------------
+
 def load_image(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content))
 
+
 def generate_with_llama(prompt):
-    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
-    if not GROQ_API_KEY:
-        return fallback_copy(prompt)
-
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    system_prompt = (
-        "You are an expert advertising copywriter. "
-        "Generate creative, product-specific, non-generic ad content."
-    )
-
-    if "slogan" in prompt.lower():
-        user_prompt = f"{prompt}\nGenerate ONE catchy slogan (max 10 words)."
-    elif "script" in prompt.lower():
-        user_prompt = f"{prompt}\nGenerate a 6–7 line cinematic voiceover script."
-    else:
-        user_prompt = prompt
-
-    payload = {
-        "model": "llama3-8b-8192",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.9,
-        "max_tokens": 350
-    }
-
-    try:
-        response = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=20
-        )
-
-        data = response.json()
-        if "choices" not in data:
-            return fallback_copy(prompt)
-
-        return data["choices"][0]["message"]["content"].strip()
-
-    def generate_with_llama(prompt):
     GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
     if not GROQ_API_KEY:
         return fallback_copy(prompt)
@@ -177,216 +134,13 @@ def fallback_copy(prompt):
         )
 
     return "Smart. Simple. Reliable."
+
+
 def generate_voiceover(text):
     tts = gTTS(text=text, lang="en")
     temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tts.save(temp_audio.name)
     return temp_audio.name
-
-def generate_billboard(product, slogan, brand_color, cta, human_img=None, product_img=None):
-    """
-    Multimodal Billboard Generator
-    Uses real-world billboard images (search-based) + AI overlay
-    """
-
-    # ---- STEP 1: SEARCH REAL BILLBOARD IMAGE ----
-    search_query = f"{product} advertising billboard"
-    bing_url = f"https://www.bing.com/images/search?q={search_query}&form=HDRSC2"
-
-    try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        html = requests.get(bing_url, headers=headers).text
-
-        # crude but effective image scrape
-        img_urls = []
-        for line in html.split('"'):
-            if line.startswith("https") and ("jpg" in line or "png" in line):
-                img_urls.append(line)
-
-        if not img_urls:
-            raise Exception("No images found")
-
-        img_url = random.choice(img_urls[:10])
-        response = requests.get(img_url, headers=headers, timeout=10)
-        bg = Image.open(BytesIO(response.content)).convert("RGB").resize((1280, 720))
-
-    except Exception:
-        # fallback background
-        bg = Image.new("RGB", (1280, 720), (20, 20, 40))
-
-    draw = ImageDraw.Draw(bg)
-
-    # ---- STEP 2: LOAD FONTS ----
-    try:
-        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
-        font_slogan = ImageFont.truetype("DejaVuSans-Bold.ttf", 46)
-        font_cta = ImageFont.truetype("DejaVuSans-Bold.ttf", 42)
-    except:
-        font_title = font_slogan = font_cta = ImageFont.load_default()
-
-    # ---- STEP 3: DECORATIVE OVERLAY ----
-    overlay = Image.new("RGBA", bg.size, (0, 0, 0, 120))
-    bg = Image.alpha_composite(bg.convert("RGBA"), overlay)
-
-    draw = ImageDraw.Draw(bg)
-
-    # ---- STEP 4: BRAND TEXT ----
-    draw.text((40, 40), product.upper(), fill=(255,255,255), font=font_title)
-    draw.text((40, 130), slogan, fill=(255, 215, 0), font=font_slogan)
-
-    # ---- STEP 5: CTA BUTTON ----
-    draw.rounded_rectangle([900, 560, 1220, 650], radius=35, fill=(255,80,80))
-    w, h = draw.textsize(cta, font=font_cta)
-    draw.text((1060 - w//2, 585), cta, fill=(255,255,255), font=font_cta)
-
-    # ---- STEP 6: OPTIONAL PRODUCT IMAGE ----
-    if product_img:
-        prod = Image.open(product_img).convert("RGBA").resize((260,260))
-        bg.paste(prod, (40, 420), prod)
-
-    # ---- SAVE ----
-    temp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    bg.convert("RGB").save(temp_img.name)
-    return temp_img.name
-
-def generate_animated_human(human_img_path, audio_path):
-    API_KEY = st.secrets.get("did_api_key", "")
-    if not API_KEY:
-        st.warning("D-ID API key missing. Video disabled.")
-        return None
-
-    url = "https://api.d-id.com/talks"
-
-    with open(human_img_path, "rb") as f:
-        img_b64 = base64.b64encode(f.read()).decode("utf-8")
-    with open(audio_path, "rb") as f:
-        audio_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-    payload = {"source_image": img_b64, "driver_audio": audio_b64}
-    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type":"application/json"}
-
-    resp = requests.post(url, json=payload, headers=headers).json()
-
-    if "result_url" in resp:
-        data = requests.get(resp["result_url"]).content
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-        tmp.write(data)
-        return tmp.name
-
-    return None
-
-def add_product_overlay(talking_video_path, product_img_path, slogan):
-    if not MOVIEPY_OK:
-        st.warning("MoviePy missing. Video disabled.")
-        return None
-
-    from moviepy.editor import (
-        VideoFileClip, ImageClip, TextClip,
-        CompositeVideoClip, ColorClip, concatenate_videoclips
-    )
-
-    # ---------- LOAD TALKING VIDEO ----------
-    talk_clip = VideoFileClip(talking_video_path)
-
-    W, H = talk_clip.size
-
-    clips = []
-
-    # ==============================
-    # 🎬 SCENE 1 — HOOK (INTRO)
-    # ==============================
-    bg_intro = ColorClip(size=(W, H), color=(10, 10, 30)).set_duration(3)
-
-    text_intro = TextClip(
-        slogan,
-        fontsize=70,
-        color='white',
-        font='DejaVu-Sans-Bold',
-        method='caption',
-        size=(W-200, None)
-    ).set_position('center').set_duration(3)
-
-    intro_scene = CompositeVideoClip([bg_intro, text_intro])
-    clips.append(intro_scene)
-
-    # ==============================
-    # 🎬 SCENE 2 — MAIN AD (TALKING HUMAN)
-    # ==============================
-    talk = talk_clip.resize(width=W)
-
-    layers = [talk]
-
-    # Product floating overlay
-    if product_img_path:
-        product_clip = (
-            ImageClip(product_img_path)
-            .set_duration(talk.duration)
-            .resize(height=220)
-            .set_position(("right", "bottom"))
-        )
-        layers.append(product_clip)
-
-    # Branding slogan overlay
-    slogan_clip = (
-        TextClip(
-            slogan,
-            fontsize=42,
-            color='yellow',
-            font='DejaVu-Sans-Bold',
-            method='caption',
-            size=(W-100, None)
-        )
-        .set_position(("center", 30))
-        .set_duration(talk.duration)
-    )
-
-    layers.append(slogan_clip)
-
-    main_scene = CompositeVideoClip(layers)
-    clips.append(main_scene)
-
-    # ==============================
-    # 🎬 SCENE 3 — CTA ENDING
-    # ==============================
-    bg_outro = ColorClip(size=(W, H), color=(30, 0, 0)).set_duration(3)
-
-    end_text = TextClip(
-        "Experience the Future.\nAct Now.",
-        fontsize=60,
-        color='white',
-        font='DejaVu-Sans-Bold',
-        method='caption',
-        size=(W-200, None)
-    ).set_position('center').set_duration(3)
-
-    outro_layers = [bg_outro, end_text]
-
-    if product_img_path:
-        prod_big = (
-            ImageClip(product_img_path)
-            .set_duration(3)
-            .resize(height=320)
-            .set_position(("center", "bottom"))
-        )
-        outro_layers.append(prod_big)
-
-    outro_scene = CompositeVideoClip(outro_layers)
-    clips.append(outro_scene)
-
-    # ==============================
-    # 🎬 FINAL COMPOSITION
-    # ==============================
-    final_video = concatenate_videoclips(clips, method="compose")
-
-    tmp_final = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    final_video.write_videofile(
-        tmp_final.name,
-        fps=24,
-        codec="libx264",
-        audio_codec="aac"
-    )
-
-    return tmp_final.name
 
 # ---------------- PROFILE CREATION ----------------
 if not st.session_state.profile_created:
