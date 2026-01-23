@@ -483,21 +483,26 @@ elif menu == "Billboard":
         if not st.session_state.slogan:
             st.error("Generate slogan first.")
         else:
-           img = generate_billboard(
-    st.session_state.user_brand or "Product",
+            img = generate_billboard(
+                st.session_state.user_brand or "Product",
                 st.session_state.slogan,
                 st.session_state.brand_color,
                 st.session_state.cta,
                 st.session_state.human_img,
                 st.session_state.product_img
             )
+
             st.session_state.billboard_img = img
             st.image(img, use_column_width=True)
             st.success("Billboard generated!")
 
     if st.session_state.billboard_img:
         with open(st.session_state.billboard_img, "rb") as f:
-            st.download_button("⬇ Download Billboard", f, file_name="adforge_billboard.png")
+            st.download_button(
+                "⬇ Download Billboard",
+                f,
+                file_name="adforge_billboard.png"
+            )
 
     st.markdown("</div>", unsafe_allow_html=True)
 
