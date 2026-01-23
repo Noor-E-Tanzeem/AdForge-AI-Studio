@@ -17,7 +17,7 @@ try:
     concatenate_videoclips,
     AudioFileClip
 )
-    
+
     MOVIEPY_OK = True
 except Exception:
     MOVIEPY_OK = False
@@ -115,48 +115,6 @@ defaults = {
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
-# ---------------- PROFILE CREATION GATE ----------------
-if not st.session_state.profile_created:
-
-    st.markdown(
-        """
-        <div style="
-            max-width:420px;
-            margin:80px auto;
-            background:#171a23;
-            padding:32px;
-            border-radius:18px;
-            box-shadow:0 10px 30px rgba(0,0,0,0.6);
-        ">
-            <h2 style="text-align:center; margin-bottom:6px;">
-                👤 Create Your Profile
-            </h2>
-            <p style="text-align:center; color:#cfcfcf; margin-bottom:24px;">
-                Set up your identity to start creating ads
-            </p>
-        """,
-        unsafe_allow_html=True
-    )
-
-    name = st.text_input("Your Name")
-    email = st.text_input("Email Address")
-    brand = st.text_input("Brand / Company Name")
-    gender = st.selectbox("Gender", ["Male", "Female"])
-
-    if st.button("🚀 Enter AdForge"):
-        if not name or not email or not brand:
-            st.error("Please fill all fields.")
-        else:
-            st.session_state.user_name = name
-            st.session_state.user_email = email
-            st.session_state.user_brand = brand
-            st.session_state.user_gender = gender
-            st.session_state.profile_created = True
-            st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.stop()
 
 
 # ---------------- UTILS ----------------
@@ -551,27 +509,31 @@ if menu == "Home":
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # ===== SAMPLE OUTPUT PREVIEW =====
-st.markdown("## 🔥 What You Can Create")
+    st.markdown("## 🔥 What You Can Create")
 
-p1, p2 = st.columns(2, gap="large")
+    p1, p2 = st.columns(2)
 
-with p1:
-    st.markdown("### 🖼 AI-Generated Billboard")
-    st.image(
-        "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
-        width=380
-    )
-    st.caption("High-impact billboard with brand styling & CTA")
+    with p1:
+        st.image(
+            "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
+            caption="AI-Generated Billboard",
+            use_column_width=True
+        )
 
-with p2:
-    st.markdown("### 🎬 AI Video Advertisement")
-    st.image(
-        "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
-        width=380
-    )
-    st.caption("Cinematic motion ad with voiceover & captions")
+    with p2:
+        st.image(
+            "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
+            caption="AI Video Advertisement",
+            use_column_width=True
+        )
 
-st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="opacity:0.7; font-size:14px;">
+    AdForge AI Studio — Hackathon Build
+    </div>
+    """, unsafe_allow_html=True)
 # ---------------- AD STUDIO ----------------
 elif menu == "Ad Studio":
 
@@ -748,23 +710,3 @@ elif menu == "Settings":
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-# ---------------- LICENSE ----------------
-elif menu == "License":
-
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">📜 License & Info</div>', unsafe_allow_html=True)
-
-    st.markdown(f"""
-    AdForge AI Studio – Hackathon Edition  
-    User: {st.session_state.user_name}  
-    Email: {st.session_state.user_email}  
-    Brand: {st.session_state.user_brand}  
-    """)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------- FOOTER ----------------
-st.markdown('<div class="footer-nav">🚀 AdForge AI Studio — Hackathon Build</div>', unsafe_allow_html=True)
