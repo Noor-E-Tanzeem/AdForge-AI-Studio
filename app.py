@@ -104,43 +104,35 @@ def generate_with_llama(prompt):
             json=payload,
             timeout=20
         )
-
         data = response.json()
-        if "choices" not in data:
-            return fallback_copy(prompt)
-
         return data["choices"][0]["message"]["content"].strip()
-
     except Exception:
         return fallback_copy(prompt)
 
 
 def fallback_copy(prompt):
+    product = prompt.replace("slogan for", "").replace("script for", "").strip()
     if "slogan" in prompt.lower():
-        product = prompt.replace("slogan for", "").strip()
         return f"{product.capitalize()} that’s ready when you are."
-
-    if "script" in prompt.lower():
-        product = prompt.replace("script for", "").strip()
-        return (
-            f"This is not just {product}.\n"
-            f"It’s designed for real-life moments.\n"
-            f"Built to perform when it matters.\n"
-            f"Simple, strong, and dependable.\n"
-            f"Wherever you go, stay confident.\n"
-            f"Prepared for the unexpected.\n"
-            f"Choose reliability."
-        )
-
-    return "Smart. Simple. Reliable."
+    return (
+        f"This is not just {product}.\n"
+        f"Designed for real-life moments.\n"
+        f"Built to perform when it matters.\n"
+        f"Strong. Simple. Reliable.\n"
+        f"Wherever life takes you.\n"
+        f"Stay confident.\n"
+        f"Choose reliability."
+    )
 
 
 def generate_voiceover(text):
     tts = gTTS(text=text, lang="en")
-    temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    tts.save(temp_audio.name)
-    return temp_audio.name
-    def generate_billboard(product, slogan, brand_color, cta, human_img=None, product_img=None):
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    tts.save(tmp.name)
+    return tmp.name
+
+
+def generate_billboard(product, slogan, brand_color, cta, human_img=None, product_img=None):
     bg = Image.new("RGB", (1280, 720), (20, 20, 40))
     draw = ImageDraw.Draw(bg)
 
@@ -165,7 +157,9 @@ def generate_voiceover(text):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     bg.save(tmp.name)
     return tmp.name
-    def generate_animated_human(human_img_path, audio_path):
+
+
+def generate_animated_human(human_img_path, audio_path):
     DID_API_KEY = st.secrets.get("did_api_key", "")
     if not DID_API_KEY:
         st.error("D-ID API key missing")
@@ -179,64 +173,42 @@ def generate_voiceover(text):
     with open(audio_path, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
 
-    payload = {
-        "source_image": img_b64,
-        "driver_audio": audio_b64
-    }
+    payload = {"source_image": img_b64, "driver_audio": audio_b64}
+    headers = {"Authorization": f"Bearer {DID_API_KEY}", "Content-Type": "application/json"}
 
-    headers = {
-        "Authorization": f"Bearer {DID_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    response = requests.post(url, json=payload, headers=headers)
-    data = response.json()
-
-    if "result_url" not in data:
-        st.error(f"D-ID error: {data}")
+    r = requests.post(url, json=payload, headers=headers).json()
+    if "result_url" not in r:
+        st.error(r)
         return None
 
-    video_bytes = requests.get(data["result_url"]).content
+    video = requests.get(r["result_url"]).content
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    tmp.write(video_bytes)
+    tmp.write(video)
     return tmp.name
-    def add_product_overlay(talking_video_path, product_img_path, slogan):
-    if not MOVIEPY_OK:
-        st.error("MoviePy not available")
-        return None
 
-    video = VideoFileClip(talking_video_path)
 
+def add_product_overlay(video_path, product_img, slogan):
+    video = VideoFileClip(video_path)
     layers = [video]
 
-    if product_img_path:
-        product_clip = (
-            ImageClip(product_img_path)
+    if product_img:
+        layers.append(
+            ImageClip(product_img)
             .resize(height=200)
             .set_position(("right", "bottom"))
             .set_duration(video.duration)
         )
-        layers.append(product_clip)
 
-    slogan_clip = (
-        TextClip(
-            slogan,
-            fontsize=40,
-            color="yellow",
-            method="caption",
-            size=(video.w - 100, None)
-        )
+    layers.append(
+        TextClip(slogan, fontsize=40, color="yellow", method="caption")
         .set_position(("center", 30))
         .set_duration(video.duration)
     )
-    layers.append(slogan_clip)
 
     final = CompositeVideoClip(layers)
-
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    final.write_videofile(tmp.name, fps=24, codec="libx264", audio_codec="aac")
+    final.write_videofile(tmp.name, fps=24)
     return tmp.name
-
 # ---------------- PROFILE CREATION ----------------
 if not st.session_state.profile_created:
 
@@ -357,28 +329,23 @@ elif menu == "Ad Studio":
             st.audio(st.session_state.audio)
             st.success("Voiceover ready!")
 
-    if st.button("🎥 Generate AI Video"):
-    st.write("DEBUG: starting video generation")
-
-    st.write("audio:", st.session_state.audio)
-    st.write("human_img:", st.session_state.human_img)
-
-    if "generate_animated_human" not in globals():
-        st.error("generate_animated_human function is NOT defined")
-        st.stop()
-
-    talking_video = generate_animated_human(
-        st.session_state.human_img,
-        st.session_state.audio
-    )
-            if talking_video:
-                final_video = add_product_overlay(talking_video, st.session_state.product_img, st.session_state.slogan)
-                if final_video:
-                    st.video(final_video)
-                    st.success("AI Video Generated!")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
+   if st.button("🎥 Generate AI Video"):
+    if not st.session_state.audio or not st.session_state.human_img:
+        st.error("Upload human image + generate voice.")
+    else:
+        talking_video = generate_animated_human(
+            st.session_state.human_img,
+            st.session_state.audio
+        )
+        if talking_video:
+            final_video = add_product_overlay(
+                talking_video,
+                st.session_state.product_img,
+                st.session_state.slogan
+            )
+            if final_video:
+                st.video(final_video)
+                st.success("AI Video Generated!")
 # ---------------- BILLBOARD ----------------
 elif menu == "Billboard":
 
