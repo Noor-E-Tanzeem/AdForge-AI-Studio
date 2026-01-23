@@ -83,25 +83,38 @@ section[data-testid="stSidebar"] {
 """, unsafe_allow_html=True)
 # ---------------- SESSION DEFAULTS ----------------
 defaults = {
+    # ---- PROFILE ----
     "profile_created": False,
     "user_name": "",
     "user_email": "",
     "user_brand": "",
     "user_gender": "Male",
+
+    # ---- AI CONTENT ----
     "slogan": "",
     "script": "",
+
+    # ---- MEDIA ----
     "audio": None,
     "human_img": None,
     "product_img": None,
     "billboard_img": None,
+
+    # ---- AD SETTINGS ----
     "audience": "General",
     "tone": "Corporate",
     "cta": "Buy Now",
-    "brand_color": "#4da6ff"
+    "brand_color": "#4da6ff",
+
+    # ---- FEEDBACK SYSTEM ----
+    "rating": 0,
+    "review": "",
+    "feedback_submitted": False
 }
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 
 # ---------------- UTILS ----------------
@@ -584,16 +597,88 @@ elif menu == "Billboard":
 # ---------------- SETTINGS ----------------
 elif menu == "Settings":
 
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">⚙ Settings</div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="
+            font-size:34px;
+            font-weight:800;
+            margin-bottom:20px;
+            color:white;
+        ">
+            ⚙ Settings
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown("• Video resolution (coming soon)")
-    st.markdown("• Background music (coming soon)")
-    st.markdown("• Voice accents (coming soon)")
-    st.markdown("• Ad history (coming soon)")
+    # ---- GENERAL SETTINGS CARD ----
+    st.markdown(
+        """
+        <div class="card" style="margin-bottom:22px;">
+            <div style="font-size:20px; font-weight:700; margin-bottom:14px;">
+                🎬 Video Preferences
+            </div>
 
-    st.markdown("</div>", unsafe_allow_html=True)
+            <div style="color:#cfcfcf; line-height:1.8;">
+                • Resolution control <span style="opacity:0.6;">(Coming Soon)</span><br>
+                • Background music <span style="opacity:0.6;">(Coming Soon)</span><br>
+                • Scene transitions <span style="opacity:0.6;">(Coming Soon)</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
+    # ---- VOICE SETTINGS CARD ----
+    st.markdown(
+        """
+        <div class="card" style="margin-bottom:22px;">
+            <div style="font-size:20px; font-weight:700; margin-bottom:14px;">
+                🎙 Voice & Audio
+            </div>
+
+            <div style="color:#cfcfcf; line-height:1.8;">
+                • Voice accents <span style="opacity:0.6;">(Coming Soon)</span><br>
+                • Voice speed control <span style="opacity:0.6;">(Coming Soon)</span><br>
+                • Emotion presets <span style="opacity:0.6;">(Coming Soon)</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---- ACCOUNT SETTINGS CARD ----
+    st.markdown(
+        """
+        <div class="card" style="margin-bottom:22px;">
+            <div style="font-size:20px; font-weight:700; margin-bottom:14px;">
+                👤 Account
+            </div>
+
+            <div style="color:#cfcfcf; line-height:1.8;">
+                • Ad history <span style="opacity:0.6;">(Coming Soon)</span><br>
+                • Download history <span style="opacity:0.6;">(Coming Soon)</span><br>
+                • Project templates <span style="opacity:0.6;">(Coming Soon)</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---- FOOTER BADGE ----
+    st.markdown(
+        """
+        <div style="
+            margin-top:30px;
+            text-align:center;
+            font-size:14px;
+            color:#9aa4b2;
+        ">
+            🚀 AdForge AI Studio — Hackathon Build
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 # ---------------- LICENSE ----------------
 elif menu == "License":
 
