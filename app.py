@@ -115,6 +115,48 @@ defaults = {
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
+# ---------------- CONFIG ----------------
+st.set_page_config(...)
+
+# ---------------- CSS ----------------
+st.markdown(""" ... """)
+
+# ---------------- SESSION DEFAULTS ----------------
+defaults = { ... }
+
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
+# 🔴 🔴 🔴 PASTE PROFILE CREATION GATE HERE 🔴 🔴 🔴
+# ---------------- PROFILE CREATION GATE ----------------
+if not st.session_state.profile_created:
+    ...
+    st.stop()
+
+
+# ---------------- UTILS ----------------
+def load_image(...):
+    ...
+
+
+# ---------------- PROFILE ICON ----------------
+if st.session_state.user_gender == "Male":
+    ...
+
+
+# ---------------- SIDEBAR ----------------
+st.sidebar.markdown(...)
+
+
+# ---------------- MENU ----------------
+menu = st.sidebar.radio(...)
+
+
+# ---------------- HOME / AD STUDIO / BILLBOARD ----------------
+if menu == "Home":
+    ...
 
 
 # ---------------- UTILS ----------------
