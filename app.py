@@ -115,48 +115,48 @@ defaults = {
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
-# ---------------- CONFIG ----------------
-st.set_page_config(...)
-
-# ---------------- CSS ----------------
-st.markdown(""" ... """)
-
-# ---------------- SESSION DEFAULTS ----------------
-defaults = { ... }
-
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
-
-
-# 🔴 🔴 🔴 PASTE PROFILE CREATION GATE HERE 🔴 🔴 🔴
 # ---------------- PROFILE CREATION GATE ----------------
 if not st.session_state.profile_created:
-    ...
+
+    st.markdown(
+        """
+        <div style="
+            max-width:420px;
+            margin:80px auto;
+            background:#171a23;
+            padding:32px;
+            border-radius:18px;
+            box-shadow:0 10px 30px rgba(0,0,0,0.6);
+        ">
+            <h2 style="text-align:center; margin-bottom:6px;">
+                👤 Create Your Profile
+            </h2>
+            <p style="text-align:center; color:#cfcfcf; margin-bottom:24px;">
+                Set up your identity to start creating ads
+            </p>
+        """,
+        unsafe_allow_html=True
+    )
+
+    name = st.text_input("Your Name")
+    email = st.text_input("Email Address")
+    brand = st.text_input("Brand / Company Name")
+    gender = st.selectbox("Gender", ["Male", "Female"])
+
+    if st.button("🚀 Enter AdForge"):
+        if not name or not email or not brand:
+            st.error("Please fill all fields.")
+        else:
+            st.session_state.user_name = name
+            st.session_state.user_email = email
+            st.session_state.user_brand = brand
+            st.session_state.user_gender = gender
+            st.session_state.profile_created = True
+            st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
     st.stop()
-
-
-# ---------------- UTILS ----------------
-def load_image(...):
-    ...
-
-
-# ---------------- PROFILE ICON ----------------
-if st.session_state.user_gender == "Male":
-    ...
-
-
-# ---------------- SIDEBAR ----------------
-st.sidebar.markdown(...)
-
-
-# ---------------- MENU ----------------
-menu = st.sidebar.radio(...)
-
-
-# ---------------- HOME / AD STUDIO / BILLBOARD ----------------
-if menu == "Home":
-    ...
 
 
 # ---------------- UTILS ----------------
