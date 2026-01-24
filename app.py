@@ -228,11 +228,10 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     from moviepy.audio.fx.all import volumex, audio_loop
     from moviepy.editor import CompositeAudioClip
 
-    # ---------- VOICE ----------
+    # ---------- AUDIO ----------
     voice = AudioFileClip(voice_path)
     voice = volumex(voice, 1.5)
 
-    # ---------- BGM ----------
     bgm = None
     try:
         bgm_url = BGM_URLS.get(tone, BGM_URLS["Corporate"])
@@ -240,46 +239,57 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
         bgm = AudioFileClip(bgm_path)
         bgm = audio_loop(bgm, duration=voice.duration)
         bgm = volumex(bgm, 0.25)
-    except Exception as e:
-        print("BGM failed:", e)
+    except:
         bgm = None
 
     final_audio = CompositeAudioClip([bgm, voice]) if bgm else voice
-    duration = final_audio.duration
+    total_duration = final_audio.duration
 
-    # ---------- PRODUCT IMAGE ----------
+    # ---------- BACKGROUND ----------
+    bg = ColorClip((1280, 720), color=(18, 18, 28)).set_duration(total_duration)
+
+    # ---------- PRODUCT IMAGE (SLOW ZOOM) ----------
     img = Image.open(product_img_path).convert("RGBA")
-    img = img.resize((420, 420))
+    img = img.resize((500, 500))
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
     product_clip = (
         ImageClip(tmp_img.name)
-        .set_duration(duration)
+        .set_duration(total_duration)
+        .resize(lambda t: 1 + 0.05 * (t / total_duration))
         .set_position("center")
-        .fadein(0.6)
-        .fadeout(0.6)
+        .fadein(0.8)
+        .fadeout(0.8)
     )
 
-    # ---------- SLOGAN TEXT ----------
-    text_img = make_text_image(slogan.upper())
-    tmp_text = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    text_img.save(tmp_text.name)
+    # ---------- TEXT ANIMATION ----------
+    lines = [l.strip() for l in clean_script_for_voice(slogan).split("\n") if l.strip()]
+    per_line = max(1.4, total_duration / max(len(lines), 1))
 
-    text_clip = (
-        ImageClip(tmp_text.name)
-        .set_duration(duration)
-        .set_position(("center", 520))
-        .fadein(1)
-        .fadeout(1)
-    )
+    text_clips = []
+    t = 0
 
-    # ---------- BACKGROUND ----------
-    bg = ColorClip((1280, 720), color=(20, 20, 40)).set_duration(duration)
+    for line in lines:
+        txt_img = make_text_image(line.upper(), size=(1000, 180))
+        tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        txt_img.save(tmp_txt.name)
 
-    # ---------- FINAL VIDEO ----------
+        clip = (
+            ImageClip(tmp_txt.name)
+            .set_start(t)
+            .set_duration(per_line)
+            .set_position(("center", 520))
+            .fadein(0.4)
+            .fadeout(0.4)
+        )
+
+        text_clips.append(clip)
+        t += per_line
+
+    # ---------- FINAL COMPOSITION ----------
     final_video = CompositeVideoClip(
-        [bg, product_clip, text_clip]
+        [bg, product_clip] + text_clips
     ).set_audio(final_audio)
 
     tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
