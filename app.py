@@ -257,7 +257,16 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     product_clip = (
         ImageClip(tmp_img.name)
         .set_duration(total_duration)
-        .resize(lambda t: 1 + 0.05 * (t / total_duration))
+        product_clip = (
+    ImageClip(tmp_img.name)
+    .set_duration(total_duration)
+    .set_position(lambda t: (
+        "center",
+        360 - int(20 * (t / total_duration))  # slow vertical drift
+    ))
+    .fadein(0.8)
+    .fadeout(0.8)
+)
         .set_position("center")
         .fadein(0.8)
         .fadeout(0.8)
