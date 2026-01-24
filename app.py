@@ -198,7 +198,7 @@ def generate_with_llama(content_type, product, audience, tone):
         Max 10 words.
         Product-specific.
         """
-        max_tokens = 60
+        max_tokens = 80
     else:
         user_prompt = f"""
         Product: {product}
@@ -229,16 +229,22 @@ def generate_with_llama(content_type, product, audience, tone):
         "max_tokens": max_tokens
     }
 
-    r = requests.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers=headers,
-        json=payload,
-        timeout=30
-    )
+    try:
+        r = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        data = r.json()
 
-    data = r.json()
-    return data["choices"][0]["message"]["content"].strip()
+        if "choices" not in data:
+            raise ValueError(data)
 
+        return data["choices"][0]["message"]["content"].strip()
+
+    except Exception as e:
+        return f"⚠️ AI generation failed: {e}"
 def generate_voiceover(text):
     tts = gTTS(text=text, lang="en")
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
