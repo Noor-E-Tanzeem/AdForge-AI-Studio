@@ -164,12 +164,81 @@ if not st.session_state.profile_created:
 def load_image(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content))
+    def generate_with_llama(content_type, product, audience, tone):
+    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
 
-
-def generate_with_llama(prompt):
-    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
     if not GROQ_API_KEY:
-        return fallback_copy(prompt)
+        st.error("Missing GROQ API key")
+        st.stop()
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    system_prompt = """
+    You are an elite advertising creative director.
+
+    RULES:
+    - Every output must be unique
+    - No generic phrases
+    - No repetition across products
+    - Strong visual, cinematic language
+    """
+
+    if content_type == "slogan":
+        user_prompt = f"""
+        Product: {product}
+        Audience: {audience}
+        Tone: {tone}
+
+        Generate ONE punchy slogan.
+        Max 10 words.
+        Product-specific.
+        """
+        max_tokens = 60
+
+    else:
+        user_prompt = f"""
+        Product: {product}
+        Audience: {audience}
+        Tone: {tone}
+
+        Write a CINEMATIC AD SCRIPT.
+        Minimum 15 lines.
+
+        Structure:
+        - Hook
+        - Product reveal
+        - Emotional depth
+        - Strong brand close
+        """
+        max_tokens = 700
+
+    payload = {
+        "model": "llama3-8b-8192",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 1.3,
+        "top_p": 0.9,
+        "presence_penalty": 1.2,
+        "frequency_penalty": 1.0,
+        "max_tokens": max_tokens
+    }
+
+    r = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=30
+    )
+
+    data = r.json()
+    return data["choices"][0]["message"]["content"].strip()
+
+
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -211,21 +280,6 @@ def generate_with_llama(prompt):
         return fallback_copy(prompt)
 
 
-def fallback_copy(prompt):
-    product = prompt.replace("slogan for", "").replace("script for", "").strip()
-
-    if "slogan" in prompt.lower():
-        return f"{product.capitalize()} that’s ready when you are."
-
-    return (
-        f"This is not just {product}.\n"
-        f"Designed for real-life moments.\n"
-        f"Built to perform when it matters.\n"
-        f"Strong. Simple. Reliable.\n"
-        f"Wherever life takes you.\n"
-        f"Stay confident.\n"
-        f"Choose reliability."
-    )
 
 
 def generate_voiceover(text):
@@ -607,8 +661,19 @@ elif menu == "Ad Studio":
         if not product:
             st.error("Enter a product name.")
         else:
-            st.session_state.slogan = generate_with_llama(f"slogan for {product}")
-            st.session_state.script = generate_with_llama(f"script for {product}")
+           st.session_state.slogan = generate_with_llama(
+    content_type="slogan",
+    product=product,
+    audience=st.session_state.audience,
+    tone=st.session_state.tone
+)
+
+st.session_state.script = generate_with_llama(
+    content_type="script",
+    product=product,
+    audience=st.session_state.audience,
+    tone=st.session_state.tone
+)
             st.success("AI content generated!")
 
     st.text_input("AI Slogan", value=st.session_state.slogan)
