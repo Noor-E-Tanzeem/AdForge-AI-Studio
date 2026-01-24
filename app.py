@@ -290,17 +290,22 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
 
     # ---------- LOAD VOICE ----------
     voice = AudioFileClip(voice_path)
-    voice = volumex(voice, 1.4)   # voice louder
+    voice = volumex(voice, 1.4)
 
-    # ---------- LOAD LOCAL BGM ----------
-    bgm = AudioFileClip("assets/bgm/default.mp3")
-bgm = audio_loop(bgm, duration=voice.duration)
-bgm = volumex(bgm, 0.25)
+    # ---------- LOAD BGM ----------
+    try:
+        bgm = AudioFileClip("assets/bgm/default.mp3")
+        bgm = audio_loop(bgm, duration=voice.duration)
+        bgm = volumex(bgm, 0.25)
+    except:
+        bgm = None
+
     # ---------- MIX AUDIO ----------
-    if bgm:
-    final_audio = CompositeAudioClip([bgm, voice])
-else:
-    final_audio = voice
+    if bgm is not None:
+        final_audio = CompositeAudioClip([bgm, voice])
+    else:
+        final_audio = voice
+
     total_duration = final_audio.duration
 
     # ---------- BACKGROUND ----------
@@ -324,9 +329,13 @@ else:
     )
 
     # ---------- TEXT ANIMATION ----------
-    lines = [l.strip() for l in clean_script_for_voice(st.session_state.script).split("\n") if l.strip()]
-    per_line = max(1.2, total_duration / max(len(lines), 1))
+    lines = [
+        l.strip()
+        for l in clean_script_for_voice(st.session_state.script).split("\n")
+        if l.strip()
+    ]
 
+    per_line = max(1.2, total_duration / max(len(lines), 1))
     text_clips = []
     t = 0
 
