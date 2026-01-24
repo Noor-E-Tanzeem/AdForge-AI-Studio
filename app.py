@@ -160,6 +160,33 @@ if not st.session_state.profile_created:
 
 
 # ---------------- UTILS ----------------
+def generate_billboard(product, slogan, brand_color, cta, product_img=None):
+    bg = Image.new("RGB", (1280, 720), (20, 20, 40))
+    draw = ImageDraw.Draw(bg)
+
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
+        font_slogan = ImageFont.truetype("DejaVuSans-Bold.ttf", 44)
+        font_cta = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
+    except:
+        font_title = font_slogan = font_cta = ImageFont.load_default()
+
+    draw.text((40, 40), product.upper(), fill="white", font=font_title)
+    draw.text((40, 160), slogan, fill="yellow", font=font_slogan)
+
+    draw.rectangle([900, 560, 1220, 650], fill=(255, 80, 80))
+    draw.text((940, 585), cta, fill="white", font=font_cta)
+
+    if product_img:
+        try:
+            prod = Image.open(product_img).resize((260, 260))
+            bg.paste(prod, (40, 400))
+        except:
+            pass
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    bg.save(tmp.name)
+    return tmp.name
 def generate_with_llama(content_type, product, audience, tone):
     GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
 
