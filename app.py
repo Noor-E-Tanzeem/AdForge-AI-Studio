@@ -637,15 +637,21 @@ if st.button("✨ Generate Slogan + Script"):
 st.text_input("AI Slogan", value=st.session_state.slogan)
 script = st.text_area("AI Script", value=st.session_state.script, height=300)
 
-    # -------- PRODUCT IMAGE --------
-    st.markdown("### 🥤 Upload Product Image")
-    prod = st.file_uploader("Product Image", type=["png", "jpg", "jpeg"])
-    if prod:
-        tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        tmp_prod.write(prod.read())
-        st.session_state.product_img = tmp_prod.name
-        st.image(st.session_state.product_img, width=200)
+   # -------- PRODUCT IMAGE --------
+st.markdown("### 🥤 Upload Product Image")
 
+prod = st.file_uploader(
+    "Product Image",
+    type=["png", "jpg", "jpeg"]
+)
+
+if prod is not None:
+    tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    tmp_prod.write(prod.read())
+    tmp_prod.close()
+
+    st.session_state.product_img = tmp_prod.name
+    st.image(st.session_state.product_img, width=200)
     # -------- VOICEOVER --------
     if st.button("🔊 Generate Voiceover"):
         if not script:
