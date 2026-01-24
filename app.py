@@ -160,7 +160,19 @@ if not st.session_state.profile_created:
 
 
 # ---------------- UTILS ----------------
+from moviepy.audio.fx.all import volumex, audio_loop
 
+def get_bgm_for_tone(tone):
+    tone = tone.lower()
+
+    bgm_map = {
+        "corporate": "assets/bgm/corporate.mp3",
+        "dramatic": "assets/bgm/dramatic.mp3",
+        "luxury": "assets/bgm/luxury.mp3",
+        "funny": "assets/bgm/funny.mp3"
+    }
+
+    return bgm_map.get(tone, "assets/bgm/corporate.mp3")
 def load_image(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content))
@@ -245,8 +257,19 @@ def generate_with_llama(content_type, product, audience, tone):
 
     except Exception as e:
         return f"⚠️ AI generation failed: {e}"
+import re
+
+def clean_script_for_voice(text):
+    # remove anything inside () or [] or *
+    text = re.sub(r"\(.*?\)", "", text)
+    text = re.sub(r"\[.*?\]", "", text)
+    text = re.sub(r"\*.*?\*", "", text)
+    return text.strip()
+
+
 def generate_voiceover(text):
-    tts = gTTS(text=text, lang="en")
+    clean_text = clean_script_for_voice(text)
+    tts = gTTS(text=clean_text, lang="en")
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tts.save(tmp.name)
     return tmp.name
@@ -302,7 +325,19 @@ def make_text_image(text, size=(1100, 200)):
 
 
 def generate_product_ad_video(product_img_path, audio_path, slogan):
-    audio = AudioFileClip(audio_path)
+    from moviepy.audio.fx.all import volumex, audio_loop
+
+def get_bgm_for_tone(tone):
+    tone = tone.lower()
+
+    bgm_map = {
+        "corporate": "assets/bgm/corporate.mp3",
+        "dramatic": "assets/bgm/dramatic.mp3",
+        "luxury": "assets/bgm/luxury.mp3",
+        "funny": "assets/bgm/funny.mp3"
+    }
+
+    return bgm_map.get(tone, "assets/bgm/corporate.mp3")
     total_duration = audio.duration
 
     # -------- Scene timing --------
@@ -419,7 +454,7 @@ def generate_product_ad_video(product_img_path, audio_path, slogan):
     final_video = concatenate_videoclips(
         [scene1, scene2, scene3, scene4],
         method="compose"
-    ).set_audio(audio)
+    ).set_audio(final_audio)
 
     tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final_video.write_videofile(
