@@ -255,9 +255,6 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     img.save(tmp_img.name)
 
     product_clip = (
-        ImageClip(tmp_img.name)
-        .set_duration(total_duration)
-        product_clip = (
     ImageClip(tmp_img.name)
     .set_duration(total_duration)
     .set_position(lambda t: (
