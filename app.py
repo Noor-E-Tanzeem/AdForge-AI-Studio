@@ -173,12 +173,25 @@ BGM_URLS = {
 }
 
 def download_bgm(url):
-    r = requests.get(url, timeout=30)
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    r = requests.get(url, headers=headers, timeout=30)
+
+    if r.status_code != 200:
+        raise RuntimeError("Failed to download BGM")
+
+    # Validate audio content
+    content_type = r.headers.get("Content-Type", "")
+    if "audio" not in content_type:
+        raise RuntimeError("Downloaded file is not audio")
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tmp.write(r.content)
     tmp.close()
-    return tmp.name
 
+    return tmp.name
 def clean_script_for_voice(text):
     text = re.sub(r"\(.*?\)", "", text)
     text = re.sub(r"\[.*?\]", "", text)
@@ -211,45 +224,63 @@ def make_text_image(text, size=(1100, 200)):
         fill=(255, 215, 0, 255)
     )
     return img
-
 def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
-    # --- Voice ---
+    from moviepy.audio.fx.all import volumex, audio_loop
+    from moviepy.editor import CompositeAudioClip
+
+    # ---------- VOICE ----------
     voice = AudioFileClip(voice_path)
-    voice = volumex(voice, 1.4)
+    voice = volumex(voice, 1.4)  # louder voice
 
-    # --- BGM ---
-    bgm_url = BGM_URLS.get(tone, BGM_URLS["Corporate"])
-    bgm_path = download_bgm(bgm_url)
-    bgm = AudioFileClip(bgm_path)
-    bgm = audio_loop(bgm, duration=voice.duration)
-    bgm = volumex(bgm, 0.25)
+    # ---------- BGM (SAFE) ----------
+    bgm = None
+    try:
+        bgm_url = BGM_URLS.get(tone, BGM_URLS["Corporate"])
+        bgm_path = download_bgm(bgm_url)
+        bgm = AudioFileClip(bgm_path)
+        bgm = audio_loop(bgm, duration=voice.duration)
+        bgm = volumex(bgm, 0.25)  # soft bgm
+    except Exception:
+        bgm = None
 
-    final_audio = CompositeAudioClip([bgm, voice])
+    final_audio = CompositeAudioClip([bgm, voice]) if bgm else voice
+    total_duration = final_audio.duration
 
-    # --- Scenes ---
+    # ---------- TIMING ----------
     t1, t2, t3 = 2, 3, 3
-    t4 = max(2, final_audio.duration - (t1 + t2 + t3))
+    t4 = max(2, total_duration - (t1 + t2 + t3))
 
+    # ---------- SCENE 1 ----------
     scene1 = ColorClip((1280, 720), color=(10, 10, 20)).set_duration(t1)
 
-    img = Image.open(product_img_path).convert("RGBA").resize((360, 360))
+    # ---------- SCENE 2 ----------
+    img = Image.open(product_img_path).convert("RGBA")
+    img = img.resize((360, 360))
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
+    product_clip = (
+        ImageClip(tmp_img.name)
+        .set_position("center")
+        .set_duration(t2)
+    )
+
     scene2 = CompositeVideoClip([
         ColorClip((1280, 720), (20, 20, 40)).set_duration(t2),
-        ImageClip(tmp_img.name).set_position("center").set_duration(t2)
+        product_clip
     ])
 
-    text_img = make_text_image(slogan.upper())
+    # ---------- SCENE 3 ----------
+    slogan_img = make_text_image(slogan.upper())
     tmp_text = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    text_img.save(tmp_text.name)
+    slogan_img.save(tmp_text.name)
 
     scene3 = CompositeVideoClip([
         ColorClip((1280, 720), (30, 30, 50)).set_duration(t3),
         ImageClip(tmp_text.name).set_position("center").set_duration(t3)
     ])
 
+    # ---------- SCENE 4 ----------
     scene4 = ColorClip((1280, 720), (0, 0, 0)).set_duration(t4)
 
     final_video = concatenate_videoclips(
