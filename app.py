@@ -466,15 +466,16 @@ if menu == "Home":
     with col1:
         st.markdown("""
         <div style="margin-top:20px;">
-            <h1 style="font-size:52px; font-weight:900; margin-bottom:10px;">
+            <h1 style="font-size:50px; font-weight:900; margin-bottom:12px;">
                 AdForge AI Studio
             </h1>
-            <p style="font-size:20px; color:#cfcfcf; max-width:520px;">
-                Create cinematic advertisements, billboards, and AI-powered promo videos
-                in seconds — no editing skills required.
+
+            <p style="font-size:19px; color:#cfcfcf; max-width:520px;">
+                Create cinematic AI advertisements, smart billboards, and
+                motion promo videos in seconds — no editing skills required.
             </p>
 
-            <div style="margin-top:18px; opacity:0.85;">
+            <div style="margin-top:18px; opacity:0.85; font-size:15px;">
                 🚀 Hackathon Build &nbsp; • &nbsp;
                 ⚡ AI-Powered &nbsp; • &nbsp;
                 🎯 Creator-Focused
@@ -485,32 +486,32 @@ if menu == "Home":
     with col2:
         st.image(
             "https://i.postimg.cc/CLnTFRX1/Screenshot_2026_01_22_232250.png",
-            use_column_width=True
+            width=320
         )
 
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # ===== FEATURES =====
-    st.markdown("## 🚀 Features")
+    st.markdown("## 🚀 Key Features")
 
     f1, f2, f3 = st.columns(3)
 
     with f1:
         st.markdown("""
         🎬 **AI Video Ads**  
-        Cinematic motion, transitions, and voiceover
+        Motion scenes, transitions & voiceover
         """)
 
     with f2:
         st.markdown("""
         🖼 **Smart Billboard Generator**  
-        Eye-catching posters with brand styling
+        Posters with brand colors & CTA
         """)
 
     with f3:
         st.markdown("""
-        🎙 **Voiceover & Script AI**  
-        Human-like narration with ad scripts
+        🎙 **Script & Voice AI**  
+        Cinematic ad copy + narration
         """)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -520,13 +521,13 @@ if menu == "Home":
     with f4:
         st.markdown("""
         🎨 **Brand Styling**  
-        Colors, CTAs, themes, and tone
+        Themes, tone & call-to-action
         """)
 
     with f5:
         st.markdown("""
         📊 **Audience Targeting**  
-        Youth, corporate, luxury & more
+        Youth, corporate, luxury, general
         """)
 
     with f6:
@@ -542,34 +543,40 @@ if menu == "Home":
 
     st.markdown("""
     **1️⃣ Enter your product or idea**  
-    **2️⃣ Generate slogan & cinematic script**  
+    **2️⃣ Generate AI slogan & script**  
     **3️⃣ Upload product image**  
-    **4️⃣ Generate AI video or billboard**  
+    **4️⃣ Create AI video or billboard**  
     **5️⃣ Download, review & share**
     """)
 
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     # ===== SAMPLE OUTPUT PREVIEW =====
-st.markdown("## 🔥 What You Can Create")
+    st.markdown("## 🔥 What You Can Create")
 
-p1, p2 = st.columns(2)
+    p1, p2 = st.columns(2)
 
-with p1:
-    st.image(
-        "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
-        caption="AI-Generated Billboard",
-        use_column_width=True
-    )
+    with p1:
+        st.image(
+            "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
+            width=340,
+            caption="AI-Generated Billboard"
+        )
 
-with p2:
-    st.image(
-        "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
-        caption="AI Video Advertisement",
-        use_column_width=True
-    )
+    with p2:
+        st.image(
+            "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
+            width=340,
+            caption="AI Video Advertisement"
+        )
 
-st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="opacity:0.65; font-size:14px;">
+        AdForge AI Studio — Built for Hackathons & Real-World AI Demos
+    </div>
+    """, unsafe_allow_html=True)
 # ---------------- AD STUDIO ----------------
 elif menu == "Ad Studio":
 
