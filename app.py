@@ -680,32 +680,7 @@ if prod is not None:
 
     st.session_state.product_img = tmp_prod.name
     st.image(st.session_state.product_img, width=200)
-    # -------- VOICEOVER --------
-    if st.button("🔊 Generate Voiceover"):
-        if not script:
-            st.error("Generate script first.")
-        else:
-            st.session_state.audio = generate_voiceover(script)
-            st.audio(st.session_state.audio)
-            st.success("Voiceover ready!")
-
-    # -------- FINAL AD VIDEO --------
-    if st.button("🎥 Generate AI Video"):
-        if not st.session_state.audio or not st.session_state.product_img:
-            st.error("Upload product image and generate voiceover first.")
-        else:
-            with st.spinner("Creating cinematic advertisement..."):
-                video_path = generate_product_ad_video(
-                    st.session_state.product_img,
-                    st.session_state.audio,
-                    st.session_state.slogan
-                )
-
-            if video_path:
-                st.video(video_path)
-                st.success("🎬 Advertisement video generated successfully!")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    
 # ---------------- BILLBOARD ----------------
 elif menu == "Billboard":
 
