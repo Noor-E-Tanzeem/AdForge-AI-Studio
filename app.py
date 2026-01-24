@@ -295,8 +295,8 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
 
     # ---------- LOAD LOCAL BGM ----------
     bgm = AudioFileClip("assets/bgm/default.mp3")
-    bgm = volumex(bgm, 0.25)      # bgm softer
-
+bgm = audio_loop(bgm, duration=voice.duration)
+bgm = volumex(bgm, 0.25)
     # ---------- MIX AUDIO ----------
     final_audio = CompositeAudioClip([bgm, voice])
     total_duration = final_audio.duration
@@ -322,7 +322,7 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     )
 
     # ---------- TEXT ANIMATION ----------
-    lines = [l.strip() for l in slogan.split("\n") if l.strip()]
+    lines = [l.strip() for l in clean_script_for_voice(st.session_state.script).split("\n") if l.strip()]
     per_line = max(1.2, total_duration / max(len(lines), 1))
 
     text_clips = []
