@@ -160,6 +160,30 @@ if not st.session_state.profile_created:
 
 
 # ---------------- UTILS ----------------
+import re
+
+def clean_script_for_voice(text):
+    # Remove stage directions and annotations
+    text = re.sub(r"\(.*?\)", "", text)
+    text = re.sub(r"\[.*?\]", "", text)
+    text = re.sub(r"\*.*?\*", "", text)
+    return text.strip()
+from moviepy.audio.fx.all import volumex, audio_loop
+
+# ---- BGM URLs ----
+BGM_URLS = {
+    "Corporate": "https://cdn.pixabay.com/download/audio/2023/03/27/audio_6b5c3f0dfb.mp3",
+    "Funny": "https://cdn.pixabay.com/download/audio/2024/01/30/audio_6a3b8b6a7a.mp3",
+    "Luxury": "https://cdn.pixabay.com/download/audio/2023/08/08/audio_9a88f1e9d0.mp3",
+    "Dramatic": "https://cdn.pixabay.com/download/audio/2023/07/02/audio_6f4d69d1db.mp3"
+}
+
+def download_bgm(url):
+    r = requests.get(url)
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    tmp.write(r.content)
+    tmp.close()
+    return tmp.name
 from moviepy.audio.fx.all import volumex, audio_loop
 
 def get_bgm_for_tone(tone):
@@ -210,14 +234,16 @@ def generate_with_llama(content_type, product, audience, tone):
         Max 10 words.
         Product-specific.
         """
-        max_tokens = 80
+        max_tokens = 320
     else:
         user_prompt = f"""
         Product: {product}
         Audience: {audience}
         Tone: {tone}
 
-        Write a CINEMATIC AD SCRIPT.
+      Write a CINEMATIC AD SCRIPT.
+Exactly 7–9 short lines.
+Each line max 8 words.
         Minimum 15 lines.
 
         Structure:
@@ -324,22 +350,76 @@ def make_text_image(text, size=(1100, 200)):
     return img
 
 
-def generate_product_ad_video(product_img_path, audio_path, slogan):
-    from moviepy.audio.fx.all import volumex, audio_loop
+def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
+    # --- Load Voice ---
+    voice = AudioFileClip(voice_path)
 
-def get_bgm_for_tone(tone):
-    tone = tone.lower()
+    # --- Load & Prepare BGM ---
+    bgm_path = download_bgm(BGM_URLS.get(tone, BGM_URLS["Corporate"]))
+    bgm = AudioFileClip(bgm_path)
 
-    bgm_map = {
-        "corporate": "assets/bgm/corporate.mp3",
-        "dramatic": "assets/bgm/dramatic.mp3",
-        "luxury": "assets/bgm/luxury.mp3",
-        "funny": "assets/bgm/funny.mp3"
-    }
+    # Loop bgm to match voice length
+    bgm = audio_loop(bgm, duration=voice.duration)
+    bgm = volumex(bgm, 0.25)   # LOW volume BGM
+    voice = volumex(voice, 1.4)  # LOUD voice
 
-    return bgm_map.get(tone, "assets/bgm/corporate.mp3")
-    total_duration = audio.duration
+    final_audio = CompositeAudioClip([bgm, voice])
 
+    total_duration = final_audio.duration
+
+    # ---------- SCENE TIMINGS ----------
+    t1, t2, t3 = 2, 3, 3
+    t4 = max(2, total_duration - (t1 + t2 + t3))
+
+    # ---------- SCENE 1 ----------
+    scene1 = ColorClip((1280, 720), color=(10, 10, 20)).set_duration(t1)
+
+    # ---------- SCENE 2 ----------
+    img = Image.open(product_img_path).convert("RGBA")
+    img = img.resize((360, 360))
+    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    img.save(tmp_img.name)
+
+    product_clip = ImageClip(tmp_img.name)\
+        .set_position("center")\
+        .set_duration(t2)
+
+    scene2 = CompositeVideoClip([
+        ColorClip((1280, 720), (20, 20, 40)).set_duration(t2),
+        product_clip
+    ])
+
+    # ---------- SCENE 3 ----------
+    text_img = make_text_image(slogan.upper())
+    tmp_text = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    text_img.save(tmp_text.name)
+
+    scene3 = CompositeVideoClip([
+        ColorClip((1280, 720), (30, 30, 50)).set_duration(t3),
+        ImageClip(tmp_text.name).set_position("center").set_duration(t3)
+    ])
+
+    # ---------- SCENE 4 ----------
+    scene4 = CompositeVideoClip([
+        ColorClip((1280, 720), (0, 0, 0)).set_duration(t4)
+    ])
+
+    final_video = concatenate_videoclips(
+        [scene1, scene2, scene3, scene4],
+        method="compose"
+    ).set_audio(final_audio)
+
+    tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    final_video.write_videofile(
+        tmp_video.name,
+        fps=24,
+        codec="libx264",
+        audio_codec="aac",
+        verbose=False,
+        logger=None
+    )
+
+    return tmp_video.name
     # -------- Scene timing --------
     t1 = 2
     t2 = 3
@@ -728,10 +808,11 @@ elif menu == "Ad Studio":
         else:
             with st.spinner("Creating cinematic AI video..."):
                 video_path = generate_product_ad_video(
-                    st.session_state.product_img,
-                    st.session_state.audio,
-                    st.session_state.slogan
-                )
+    st.session_state.product_img,
+    st.session_state.audio,
+    st.session_state.slogan,
+    st.session_state.tone
+)
 
             st.video(video_path)
             st.success("🎉 AI video generated successfully!")
