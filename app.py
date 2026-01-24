@@ -641,7 +641,11 @@ if st.button("✨ Generate Slogan + Script"):
         st.success("AI content generated!")
 
 st.text_input("AI Slogan", value=st.session_state.slogan)
-script = st.text_area("AI Script", value=st.session_state.script, height=300)
+script = st.text_area(
+    "AI Script",
+    value=st.session_state.script.strip(),
+    height=200
+)
 
    # -------- PRODUCT IMAGE --------
 st.markdown("### 🥤 Upload Product Image")
