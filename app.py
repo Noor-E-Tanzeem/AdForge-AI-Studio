@@ -613,28 +613,29 @@ elif menu == "Ad Studio":
         "Brand Color", st.session_state.brand_color
     )
 
-    # -------- AI COPY --------
-    if st.button("✨ Generate Slogan + Script"):
-        if not product:
-            st.error("Enter a product name.")
-        else:
-           st.session_state.slogan = generate_with_llama(
-    content_type="slogan",
-    product=product,
-    audience=st.session_state.audience,
-    tone=st.session_state.tone
-)
+   # -------- AI COPY --------
+if st.button("✨ Generate Slogan + Script"):
+    if not product:
+        st.error("Enter a product name.")
+    else:
+        st.session_state.slogan = generate_with_llama(
+            content_type="slogan",
+            product=product,
+            audience=st.session_state.audience,
+            tone=st.session_state.tone
+        )
 
-st.session_state.script = generate_with_llama(
-    content_type="script",
-    product=product,
-    audience=st.session_state.audience,
-    tone=st.session_state.tone
-)
-            st.success("AI content generated!")
+        st.session_state.script = generate_with_llama(
+            content_type="script",
+            product=product,
+            audience=st.session_state.audience,
+            tone=st.session_state.tone
+        )
 
-    st.text_input("AI Slogan", value=st.session_state.slogan)
-    script = st.text_area("AI Script", value=st.session_state.script, height=150)
+        st.success("AI content generated!")
+
+st.text_input("AI Slogan", value=st.session_state.slogan)
+script = st.text_area("AI Script", value=st.session_state.script, height=300)
 
     # -------- PRODUCT IMAGE --------
     st.markdown("### 🥤 Upload Product Image")
