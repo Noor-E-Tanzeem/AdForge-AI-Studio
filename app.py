@@ -160,6 +160,69 @@ if not st.session_state.profile_created:
 
 
 # ---------------- UTILS ----------------
+def generate_with_llama(content_type, product, audience, tone):
+    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
+
+    if not GROQ_API_KEY:
+        st.error("Missing GROQ API key")
+        st.stop()
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    system_prompt = """
+    You are an elite advertising creative director.
+    Every output must be unique.
+    Avoid generic phrases.
+    """
+
+    if content_type == "slogan":
+        user_prompt = f"""
+        Product: {product}
+        Audience: {audience}
+        Tone: {tone}
+
+        Generate ONE punchy slogan.
+        Max 10 words.
+        """
+        max_tokens = 80
+    else:
+        user_prompt = f"""
+        Product: {product}
+        Audience: {audience}
+        Tone: {tone}
+
+        Write a cinematic ad script.
+        7–9 short lines.
+        No brackets, no stage directions.
+        """
+        max_tokens = 300
+
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 1.2,
+        "max_tokens": max_tokens
+    }
+
+    r = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=30
+    )
+
+    data = r.json()
+
+    if "choices" not in data:
+        raise RuntimeError(data)
+
+    return data["choices"][0]["message"]["content"].strip()
 import re
 from moviepy.audio.fx.all import volumex, audio_loop
 from moviepy.audio.AudioClip import CompositeAudioClip
