@@ -164,7 +164,9 @@ if not st.session_state.profile_created:
 def load_image(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content))
-    def generate_with_llama(content_type, product, audience, tone):
+
+
+def generate_with_llama(content_type, product, audience, tone):
     GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
 
     if not GROQ_API_KEY:
@@ -197,7 +199,6 @@ def load_image(url):
         Product-specific.
         """
         max_tokens = 60
-
     else:
         user_prompt = f"""
         Product: {product}
@@ -237,50 +238,6 @@ def load_image(url):
 
     data = r.json()
     return data["choices"][0]["message"]["content"].strip()
-
-
-
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    system_prompt = (
-        "You are an expert advertising copywriter. "
-        "Generate creative, product-specific, non-generic ad content."
-    )
-
-    if "slogan" in prompt.lower():
-        user_prompt = f"{prompt}\nGenerate ONE catchy slogan (max 10 words)."
-    elif "script" in prompt.lower():
-        user_prompt = f"{prompt}\nGenerate a 6–7 line cinematic voiceover script."
-    else:
-        user_prompt = prompt
-
-    payload = {
-        "model": "llama3-8b-8192",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.9,
-        "max_tokens": 350
-    }
-
-    try:
-        r = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=20
-        )
-        data = r.json()
-        return data["choices"][0]["message"]["content"].strip()
-    except Exception:
-        return fallback_copy(prompt)
-
-
-
 
 def generate_voiceover(text):
     tts = gTTS(text=text, lang="en")
