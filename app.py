@@ -556,20 +556,18 @@ st.markdown("## 🔥 What You Can Create")
 p1, p2 = st.columns(2)
 
 with p1:
-    st.markdown("### 🖼 AI-Generated Billboard")
     st.image(
         "https://i.postimg.cc/k5PbY3Q4/Screenshot_2026_01_24_031122.png",
-        width=340
+        caption="AI-Generated Billboard",
+        use_column_width=True
     )
-    st.caption("High-impact billboard with brand styling & CTA")
 
 with p2:
-    st.markdown("### 🎬 AI Video Advertisement")
     st.image(
         "https://i.postimg.cc/c1k8y87G/Screenshot_2026_01_24_031153.png",
-        width=340
+        caption="AI Video Advertisement",
+        use_column_width=True
     )
-    st.caption("Cinematic motion ad with voiceover & animated captions")
 
 st.markdown("<br>", unsafe_allow_html=True)
 # ---------------- AD STUDIO ----------------
