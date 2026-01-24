@@ -254,20 +254,16 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
-    product_clip = (
+  product_clip = (
     ImageClip(tmp_img.name)
     .set_duration(total_duration)
     .set_position(lambda t: (
         "center",
-        360 - int(20 * (t / total_duration))  # slow vertical drift
+        360 - int(20 * (t / total_duration))  # slow cinematic vertical drift
     ))
     .fadein(0.8)
     .fadeout(0.8)
 )
-        .set_position("center")
-        .fadein(0.8)
-        .fadeout(0.8)
-    )
 
     # ---------- TEXT ANIMATION ----------
     lines = [l.strip() for l in clean_script_for_voice(slogan).split("\n") if l.strip()]
