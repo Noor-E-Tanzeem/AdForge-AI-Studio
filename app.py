@@ -689,7 +689,44 @@ elif menu == "Settings":
     st.text_input("Brand", value=st.session_state.user_brand, disabled=True)
 
     st.divider()
+# ---------------- LICENSE ----------------
+elif menu == "License":
 
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📜 License & Usage</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    ### 🔐 Application License
+
+    **AdForge AI Studio** is a hackathon prototype built for **educational and demonstration purposes**.
+
+    ### 🤖 AI Models
+    - Uses **LLaMA model** via **Groq API**
+    - Model is accessed through API calls
+    - No model training or fine-tuning is done locally
+
+    ### 📦 Libraries Used
+    - Streamlit (UI framework)
+    - MoviePy (video generation)
+    - PIL (image processing)
+    - gTTS (text-to-speech)
+
+    All libraries are open-source and used according to their licenses.
+
+    ### 🎵 Media Usage
+    - Background music is **royalty-free**
+    - Used only for demo purposes
+
+    ### ⚠ Disclaimer
+    - Generated content is AI-based
+    - Not intended for commercial or legal use
+    - This is a prototype, not a deployed product
+
+    ---
+    © 2026 AdForge AI Studio – Hackathon Build
+    """)
+
+    st.markdown('</div>', unsafe_allow_html=True)
     # -------- PREFERENCES --------
     st.markdown("### 🎨 Preferences")
 
