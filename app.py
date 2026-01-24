@@ -624,29 +624,47 @@ if st.button("✨ Generate Slogan + Script"):
     if not product:
         st.error("Enter a product name.")
     else:
-        st.session_state.slogan = generate_with_llama(
-            content_type="slogan",
-            product=product,
-            audience=st.session_state.audience,
-            tone=st.session_state.tone
-        )
+        with st.spinner("Generating AI content..."):
+            st.session_state.slogan = generate_with_llama(
+                content_type="slogan",
+                product=product,
+                audience=st.session_state.audience,
+                tone=st.session_state.tone
+            )
 
-        st.session_state.script = generate_with_llama(
-            content_type="script",
-            product=product,
-            audience=st.session_state.audience,
-            tone=st.session_state.tone
-        )
+            st.session_state.script = generate_with_llama(
+                content_type="script",
+                product=product,
+                audience=st.session_state.audience,
+                tone=st.session_state.tone
+            )
 
-        st.success("AI content generated!")
+        st.success("AI slogan & script generated!")
 
-st.text_input("AI Slogan", value=st.session_state.slogan)
-script = st.text_area(
-    "AI Script",
-    value=st.session_state.script.strip(),
-    height=200
+# -------- SHOW GENERATED TEXT --------
+st.text_input(
+    "AI Slogan",
+    value=st.session_state.slogan
 )
 
+st.text_area(
+    "AI Script",
+    value=st.session_state.script,
+    height=280
+)
+
+# -------- VOICEOVER --------
+if st.button("🔊 Generate Voiceover"):
+    if not st.session_state.script:
+        st.error("Generate script first.")
+    else:
+        with st.spinner("Generating voiceover..."):
+            st.session_state.audio = generate_voiceover(
+                st.session_state.script
+            )
+
+        st.audio(st.session_state.audio)
+        st.success("Voiceover generated!")
    # -------- PRODUCT IMAGE --------
 st.markdown("### 🥤 Upload Product Image")
 
