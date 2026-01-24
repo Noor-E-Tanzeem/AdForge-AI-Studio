@@ -254,34 +254,7 @@ import re
 from moviepy.audio.fx.all import volumex, audio_loop
 from moviepy.audio.AudioClip import CompositeAudioClip
 
-# ---- BGM URLs (KEEP THESE) ----
-BGM_URLS = {
-    "Corporate": "https://cdn.pixabay.com/download/audio/2023/03/27/audio_6b5c3f0dfb.mp3",
-    "Funny": "https://cdn.pixabay.com/download/audio/2024/01/30/audio_6a3b8b6a7a.mp3",
-    "Luxury": "https://cdn.pixabay.com/download/audio/2023/08/08/audio_9a88f1e9d0.mp3",
-    "Dramatic": "https://cdn.pixabay.com/download/audio/2023/07/02/audio_6f4d69d1db.mp3"
-}
 
-def download_bgm(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    r = requests.get(url, headers=headers, timeout=30)
-
-    if r.status_code != 200:
-        raise RuntimeError("Failed to download BGM")
-
-    # Validate audio content
-    content_type = r.headers.get("Content-Type", "")
-    if "audio" not in content_type:
-        raise RuntimeError("Downloaded file is not audio")
-
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-    tmp.write(r.content)
-    tmp.close()
-
-    return tmp.name
 def clean_script_for_voice(text):
     text = re.sub(r"\(.*?\)", "", text)
     text = re.sub(r"\[.*?\]", "", text)
@@ -315,54 +288,48 @@ def make_text_image(text, size=(1100, 200)):
     )
     return img
 def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
-    from moviepy.audio.fx.all import volumex, audio_loop
-    from moviepy.editor import CompositeAudioClip
 
-    # ---------- AUDIO ----------
+    # ---------- LOAD VOICE ----------
     voice = AudioFileClip(voice_path)
-    voice = volumex(voice, 1.5)
+    voice = volumex(voice, 1.4)   # voice louder
 
-    bgm = None
-    try:
-        bgm_url = BGM_URLS.get(tone, BGM_URLS["Corporate"])
-        bgm_path = download_bgm(bgm_url)
-        bgm = AudioFileClip(bgm_path)
-        bgm = audio_loop(bgm, duration=voice.duration)
-        bgm = volumex(bgm, 0.25)
-    except:
-        bgm = None
+    # ---------- LOAD LOCAL BGM ----------
+    bgm = AudioFileClip("assets/bgm/default.mp3")
+    bgm = volumex(bgm, 0.25)      # bgm softer
 
-    final_audio = CompositeAudioClip([bgm, voice]) if bgm else voice
+    # ---------- MIX AUDIO ----------
+    final_audio = CompositeAudioClip([bgm, voice])
     total_duration = final_audio.duration
 
     # ---------- BACKGROUND ----------
-    bg = ColorClip((1280, 720), color=(18, 18, 28)).set_duration(total_duration)
+    bg = ColorClip(
+        (1280, 720),
+        color=(18, 18, 28)
+    ).set_duration(total_duration)
 
-    # ---------- PRODUCT IMAGE (SLOW ZOOM) ----------
+    # ---------- PRODUCT IMAGE ----------
     img = Image.open(product_img_path).convert("RGBA")
-    img = img.resize((500, 500))
+    img = img.resize((520, 520))
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
     product_clip = (
         ImageClip(tmp_img.name)
         .set_duration(total_duration)
-        .set_position(lambda t: (
-            "center",
-            360 - int(20 * (t / total_duration))  # slow cinematic vertical drift
-        ))
+        .set_position("center")
         .fadein(0.8)
         .fadeout(0.8)
     )
+
     # ---------- TEXT ANIMATION ----------
-    lines = [l.strip() for l in clean_script_for_voice(slogan).split("\n") if l.strip()]
-    per_line = max(1.4, total_duration / max(len(lines), 1))
+    lines = [l.strip() for l in slogan.split("\n") if l.strip()]
+    per_line = max(1.2, total_duration / max(len(lines), 1))
 
     text_clips = []
     t = 0
 
     for line in lines:
-        txt_img = make_text_image(line.upper(), size=(1000, 180))
+        txt_img = make_text_image(line.upper(), size=(1000, 160))
         tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         txt_img.save(tmp_txt.name)
 
@@ -370,7 +337,7 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
             ImageClip(tmp_txt.name)
             .set_start(t)
             .set_duration(per_line)
-            .set_position(("center", 520))
+            .set_position(("center", 540))
             .fadein(0.4)
             .fadeout(0.4)
         )
@@ -378,7 +345,7 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
         text_clips.append(clip)
         t += per_line
 
-    # ---------- FINAL COMPOSITION ----------
+    # ---------- FINAL VIDEO ----------
     final_video = CompositeVideoClip(
         [bg, product_clip] + text_clips
     ).set_audio(final_audio)
