@@ -252,8 +252,7 @@ def generate_with_llama(content_type, product, audience, tone):
     return data["choices"][0]["message"]["content"].strip()
 import re
 from moviepy.audio.fx.all import volumex, audio_loop
-from moviepy.audio.AudioClip import CompositeAudioClip
-
+from moviepy.editor import CompositeAudioClip
 
 def clean_script_for_voice(text):
     text = re.sub(r"\(.*?\)", "", text)
@@ -298,7 +297,10 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
 bgm = audio_loop(bgm, duration=voice.duration)
 bgm = volumex(bgm, 0.25)
     # ---------- MIX AUDIO ----------
+    if bgm:
     final_audio = CompositeAudioClip([bgm, voice])
+else:
+    final_audio = voice
     total_duration = final_audio.duration
 
     # ---------- BACKGROUND ----------
