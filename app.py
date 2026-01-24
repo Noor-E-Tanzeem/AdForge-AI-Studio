@@ -161,16 +161,10 @@ if not st.session_state.profile_created:
 
 # ---------------- UTILS ----------------
 import re
-
-def clean_script_for_voice(text):
-    # Remove stage directions and annotations
-    text = re.sub(r"\(.*?\)", "", text)
-    text = re.sub(r"\[.*?\]", "", text)
-    text = re.sub(r"\*.*?\*", "", text)
-    return text.strip()
 from moviepy.audio.fx.all import volumex, audio_loop
+from moviepy.audio.AudioClip import CompositeAudioClip
 
-# ---- BGM URLs ----
+# ---- BGM URLs (KEEP THESE) ----
 BGM_URLS = {
     "Corporate": "https://cdn.pixabay.com/download/audio/2023/03/27/audio_6b5c3f0dfb.mp3",
     "Funny": "https://cdn.pixabay.com/download/audio/2024/01/30/audio_6a3b8b6a7a.mp3",
@@ -179,119 +173,17 @@ BGM_URLS = {
 }
 
 def download_bgm(url):
-    r = requests.get(url)
+    r = requests.get(url, timeout=30)
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tmp.write(r.content)
     tmp.close()
     return tmp.name
-from moviepy.audio.fx.all import volumex, audio_loop
-
-def get_bgm_for_tone(tone):
-    tone = tone.lower()
-
-    bgm_map = {
-        "corporate": "assets/bgm/corporate.mp3",
-        "dramatic": "assets/bgm/dramatic.mp3",
-        "luxury": "assets/bgm/luxury.mp3",
-        "funny": "assets/bgm/funny.mp3"
-    }
-
-    return bgm_map.get(tone, "assets/bgm/corporate.mp3")
-def load_image(url):
-    response = requests.get(url)
-    return Image.open(BytesIO(response.content))
-
-
-def generate_with_llama(content_type, product, audience, tone):
-    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
-
-    if not GROQ_API_KEY:
-        st.error("Missing GROQ API key")
-        st.stop()
-
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    system_prompt = """
-    You are an elite advertising creative director.
-
-    RULES:
-    - Every output must be unique
-    - No generic phrases
-    - No repetition across products
-    - Strong visual, cinematic language
-    """
-
-    if content_type == "slogan":
-        user_prompt = f"""
-        Product: {product}
-        Audience: {audience}
-        Tone: {tone}
-
-        Generate ONE punchy slogan.
-        Max 10 words.
-        Product-specific.
-        """
-        max_tokens = 320
-    else:
-        user_prompt = f"""
-        Product: {product}
-        Audience: {audience}
-        Tone: {tone}
-
-      Write a CINEMATIC AD SCRIPT.
-Exactly 7–9 short lines.
-Each line max 8 words.
-        Minimum 15 lines.
-
-        Structure:
-        - Hook
-        - Product reveal
-        - Emotional depth
-        - Strong brand close
-        """
-        max_tokens = 700
-
-    payload = {
-        "model": "llama-3.1-8b-instant",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 1.3,
-        "top_p": 0.9,
-        "presence_penalty": 1.2,
-        "frequency_penalty": 1.0,
-        "max_tokens": max_tokens
-    }
-
-    try:
-        r = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-        data = r.json()
-
-        if "choices" not in data:
-            raise ValueError(data)
-
-        return data["choices"][0]["message"]["content"].strip()
-
-    except Exception as e:
-        return f"⚠️ AI generation failed: {e}"
-import re
 
 def clean_script_for_voice(text):
-    # remove anything inside () or [] or *
     text = re.sub(r"\(.*?\)", "", text)
     text = re.sub(r"\[.*?\]", "", text)
     text = re.sub(r"\*.*?\*", "", text)
     return text.strip()
-
 
 def generate_voiceover(text):
     clean_text = clean_script_for_voice(text)
@@ -300,37 +192,9 @@ def generate_voiceover(text):
     tts.save(tmp.name)
     return tmp.name
 
-
-def generate_billboard(product, slogan, brand_color, cta, product_img=None):
-    bg = Image.new("RGB", (1280, 720), (20, 20, 40))
-    draw = ImageDraw.Draw(bg)
-
-    try:
-        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
-        font_slogan = ImageFont.truetype("DejaVuSans-Bold.ttf", 44)
-        font_cta = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
-    except:
-        font_title = font_slogan = font_cta = ImageFont.load_default()
-
-    draw.text((40, 40), product.upper(), fill="white", font=font_title)
-    draw.text((40, 160), slogan, fill="yellow", font=font_slogan)
-
-    draw.rectangle([900, 560, 1220, 650], fill=(255, 80, 80))
-    draw.text((940, 585), cta, fill="white", font=font_cta)
-
-    if product_img:
-        prod = Image.open(product_img).resize((260, 260))
-        bg.paste(prod, (40, 400))
-
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    bg.save(tmp.name)
-    return tmp.name
-
-
 def make_text_image(text, size=(1100, 200)):
     img = Image.new("RGBA", size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-
     try:
         font = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
     except:
@@ -346,50 +210,37 @@ def make_text_image(text, size=(1100, 200)):
         font=font,
         fill=(255, 215, 0, 255)
     )
-
     return img
 
-
 def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
-    # --- Load Voice ---
+    # --- Voice ---
     voice = AudioFileClip(voice_path)
+    voice = volumex(voice, 1.4)
 
-    # --- Load & Prepare BGM ---
-    bgm_path = download_bgm(BGM_URLS.get(tone, BGM_URLS["Corporate"]))
+    # --- BGM ---
+    bgm_url = BGM_URLS.get(tone, BGM_URLS["Corporate"])
+    bgm_path = download_bgm(bgm_url)
     bgm = AudioFileClip(bgm_path)
-
-    # Loop bgm to match voice length
     bgm = audio_loop(bgm, duration=voice.duration)
-    bgm = volumex(bgm, 0.25)   # LOW volume BGM
-    voice = volumex(voice, 1.4)  # LOUD voice
+    bgm = volumex(bgm, 0.25)
 
     final_audio = CompositeAudioClip([bgm, voice])
 
-    total_duration = final_audio.duration
-
-    # ---------- SCENE TIMINGS ----------
+    # --- Scenes ---
     t1, t2, t3 = 2, 3, 3
-    t4 = max(2, total_duration - (t1 + t2 + t3))
+    t4 = max(2, final_audio.duration - (t1 + t2 + t3))
 
-    # ---------- SCENE 1 ----------
     scene1 = ColorClip((1280, 720), color=(10, 10, 20)).set_duration(t1)
 
-    # ---------- SCENE 2 ----------
-    img = Image.open(product_img_path).convert("RGBA")
-    img = img.resize((360, 360))
+    img = Image.open(product_img_path).convert("RGBA").resize((360, 360))
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
-    product_clip = ImageClip(tmp_img.name)\
-        .set_position("center")\
-        .set_duration(t2)
-
     scene2 = CompositeVideoClip([
         ColorClip((1280, 720), (20, 20, 40)).set_duration(t2),
-        product_clip
+        ImageClip(tmp_img.name).set_position("center").set_duration(t2)
     ])
 
-    # ---------- SCENE 3 ----------
     text_img = make_text_image(slogan.upper())
     tmp_text = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     text_img.save(tmp_text.name)
@@ -399,138 +250,8 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
         ImageClip(tmp_text.name).set_position("center").set_duration(t3)
     ])
 
-    # ---------- SCENE 4 ----------
-    scene4 = CompositeVideoClip([
-        ColorClip((1280, 720), (0, 0, 0)).set_duration(t4)
-    ])
+    scene4 = ColorClip((1280, 720), (0, 0, 0)).set_duration(t4)
 
-    final_video = concatenate_videoclips(
-        [scene1, scene2, scene3, scene4],
-        method="compose"
-    ).set_audio(final_audio)
-
-    tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    final_video.write_videofile(
-        tmp_video.name,
-        fps=24,
-        codec="libx264",
-        audio_codec="aac",
-        verbose=False,
-        logger=None
-    )
-
-    return tmp_video.name
-    # -------- Scene timing --------
-    t1 = 2
-    t2 = 3
-    t3 = 3
-    t4 = max(2, total_duration - (t1 + t2 + t3))
-
-    # ================= SCENE 1 — HOOK =================
-    scene1_bg = ColorClip(
-        size=(1280, 720),
-        color=(10, 10, 20)
-    ).set_duration(t1)
-
-    hook_img = make_text_image("MADE FOR REAL LIFE")
-    tmp_hook = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    hook_img.save(tmp_hook.name)
-
-    hook_clip = (
-        ImageClip(tmp_hook.name)
-        .set_position("center")
-        .set_duration(t1)
-        .fadein(0.6)
-    )
-
-    scene1 = CompositeVideoClip([scene1_bg, hook_clip])
-
-    # ================= SCENE 2 — PRODUCT REVEAL =================
-    img = Image.open(product_img_path).convert("RGBA")
-    w, h = img.size
-    new_h = 360
-    new_w = int((new_h / h) * w)
-    img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-    tmp_prod = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    img.save(tmp_prod.name)
-
-    scene2_bg = ColorClip(
-        size=(1280, 720),
-        color=(20, 20, 40)
-    ).set_duration(t2)
-
-    product_clip = (
-        ImageClip(tmp_prod.name)
-        .set_position(lambda t: (
-            400 + int(140 * (t / t2)),   # slide-in
-            220 + int(6 * (-1) ** int(t * 2))  # subtle float
-        ))
-        .set_duration(t2)
-    )
-
-    slogan_img = make_text_image(slogan.upper())
-    tmp_slogan = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    slogan_img.save(tmp_slogan.name)
-
-    slogan_clip = (
-        ImageClip(tmp_slogan.name)
-        .set_position(lambda t: ("center", int(130 - 40 * min(t, 1))))
-        .set_duration(t2)
-        .fadein(0.6)
-    )
-
-    overlay = ColorClip(
-        size=(1280, 720),
-        color=(0, 0, 0)
-    ).set_opacity(0.25).set_duration(t2)
-
-    scene2 = CompositeVideoClip([
-        scene2_bg,
-        overlay,
-        product_clip,
-        slogan_clip
-    ])
-
-    # ================= SCENE 3 — VALUE =================
-    scene3_bg = ColorClip(
-        size=(1280, 720),
-        color=(30, 30, 50)
-    ).set_duration(t3)
-
-    value_img = make_text_image("SIMPLE. STRONG. RELIABLE.")
-    tmp_value = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    value_img.save(tmp_value.name)
-
-    value_clip = (
-        ImageClip(tmp_value.name)
-        .set_position("center")
-        .set_duration(t3)
-        .fadein(0.6)
-    )
-
-    scene3 = CompositeVideoClip([scene3_bg, value_clip])
-
-    # ================= SCENE 4 — CTA =================
-    scene4_bg = ColorClip(
-        size=(1280, 720),
-        color=(0, 0, 0)
-    ).set_duration(t4)
-
-    cta_img = make_text_image("EXPERIENCE IT TODAY")
-    tmp_cta = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    cta_img.save(tmp_cta.name)
-
-    cta_clip = (
-        ImageClip(tmp_cta.name)
-        .set_position("center")
-        .set_duration(t4)
-        .fadein(0.6)
-    )
-
-    scene4 = CompositeVideoClip([scene4_bg, cta_clip])
-
-    # ================= FINAL VIDEO =================
     final_video = concatenate_videoclips(
         [scene1, scene2, scene3, scene4],
         method="compose"
