@@ -230,62 +230,56 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
 
     # ---------- VOICE ----------
     voice = AudioFileClip(voice_path)
-    voice = volumex(voice, 1.4)  # louder voice
+    voice = volumex(voice, 1.5)
 
-    # ---------- BGM (SAFE) ----------
+    # ---------- BGM ----------
     bgm = None
     try:
         bgm_url = BGM_URLS.get(tone, BGM_URLS["Corporate"])
         bgm_path = download_bgm(bgm_url)
         bgm = AudioFileClip(bgm_path)
         bgm = audio_loop(bgm, duration=voice.duration)
-        bgm = volumex(bgm, 0.25)  # soft bgm
-    except Exception:
+        bgm = volumex(bgm, 0.25)
+    except Exception as e:
+        print("BGM failed:", e)
         bgm = None
 
     final_audio = CompositeAudioClip([bgm, voice]) if bgm else voice
-    total_duration = final_audio.duration
+    duration = final_audio.duration
 
-    # ---------- TIMING ----------
-    t1, t2, t3 = 2, 3, 3
-    t4 = max(2, total_duration - (t1 + t2 + t3))
-
-    # ---------- SCENE 1 ----------
-    scene1 = ColorClip((1280, 720), color=(10, 10, 20)).set_duration(t1)
-
-    # ---------- SCENE 2 ----------
+    # ---------- PRODUCT IMAGE ----------
     img = Image.open(product_img_path).convert("RGBA")
-    img = img.resize((360, 360))
+    img = img.resize((420, 420))
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
     product_clip = (
         ImageClip(tmp_img.name)
+        .set_duration(duration)
         .set_position("center")
-        .set_duration(t2)
+        .fadein(0.6)
+        .fadeout(0.6)
     )
 
-    scene2 = CompositeVideoClip([
-        ColorClip((1280, 720), (20, 20, 40)).set_duration(t2),
-        product_clip
-    ])
-
-    # ---------- SCENE 3 ----------
-    slogan_img = make_text_image(slogan.upper())
+    # ---------- SLOGAN TEXT ----------
+    text_img = make_text_image(slogan.upper())
     tmp_text = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    slogan_img.save(tmp_text.name)
+    text_img.save(tmp_text.name)
 
-    scene3 = CompositeVideoClip([
-        ColorClip((1280, 720), (30, 30, 50)).set_duration(t3),
-        ImageClip(tmp_text.name).set_position("center").set_duration(t3)
-    ])
+    text_clip = (
+        ImageClip(tmp_text.name)
+        .set_duration(duration)
+        .set_position(("center", 520))
+        .fadein(1)
+        .fadeout(1)
+    )
 
-    # ---------- SCENE 4 ----------
-    scene4 = ColorClip((1280, 720), (0, 0, 0)).set_duration(t4)
+    # ---------- BACKGROUND ----------
+    bg = ColorClip((1280, 720), color=(20, 20, 40)).set_duration(duration)
 
-    final_video = concatenate_videoclips(
-        [scene1, scene2, scene3, scene4],
-        method="compose"
+    # ---------- FINAL VIDEO ----------
+    final_video = CompositeVideoClip(
+        [bg, product_clip, text_clip]
     ).set_audio(final_audio)
 
     tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
