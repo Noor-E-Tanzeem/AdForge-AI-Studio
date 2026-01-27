@@ -303,115 +303,81 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
         bgm = None
 
     # ---------- MIX AUDIO ----------
-    if bgm is not None:
+    if bgm:
         final_audio = CompositeAudioClip([bgm, voice])
     else:
         final_audio = voice
 
-    total_duration = final_audio.duration
-
     # ---------- PRODUCT IMAGE ----------
-img = Image.open(product_img_path).convert("RGBA")
-img = img.resize((520, 520))
-tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-img.save(tmp_img.name)
+    img = Image.open(product_img_path).convert("RGBA")
+    img = img.resize((520, 520))
+    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    img.save(tmp_img.name)
 
-# ---------- SCRIPT LINES ----------
-lines = [
-    l.strip()
-    for l in clean_script_for_voice(st.session_state.script).split("\n")
-    if l.strip()
-]
+    # ---------- SCRIPT LINES ----------
+    lines = [
+        l.strip()
+        for l in clean_script_for_voice(st.session_state.script).split("\n")
+        if l.strip()
+    ]
 
-# ---------- SCENE 1 : HOOK ----------
-scene1_bg = ColorClip((1280, 720), color=(8, 8, 18)).set_duration(2)
+    # ---------- SCENE 1 ----------
+    scene1_bg = ColorClip((1280, 720), color=(8, 8, 18)).set_duration(2)
+    hook_img = make_text_image(lines[0].upper())
+    tmp_hook = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    hook_img.save(tmp_hook.name)
 
-hook_img = make_text_image(lines[0].upper(), size=(1000, 200))
-tmp_hook = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-hook_img.save(tmp_hook.name)
+    scene1 = CompositeVideoClip([
+        scene1_bg,
+        ImageClip(tmp_hook.name).set_position("center").fadein(0.6)
+    ])
 
-scene1_text = (
-    ImageClip(tmp_hook.name)
-    .set_duration(2)
-    .set_position("center")
-    .fadein(0.6)
-)
+    # ---------- SCENE 2 ----------
+    scene2_bg = ColorClip((1280, 720), color=(18, 18, 30)).set_duration(3)
+    product_clip = ImageClip(tmp_img.name).set_position("center").resize(lambda t: 1 + 0.05*t)
+    scene2 = CompositeVideoClip([scene2_bg, product_clip])
 
-scene1 = CompositeVideoClip([scene1_bg, scene1_text])
+    # ---------- SCENE 3 ----------
+    scene3_bg = ColorClip((1280, 720), color=(28, 28, 45)).set_duration(3)
+    value_img = make_text_image(lines[1] if len(lines) > 1 else "BUILT FOR THE FUTURE")
+    tmp_value = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    value_img.save(tmp_value.name)
 
-# ---------- SCENE 2 : PRODUCT REVEAL ----------
-scene2_bg = ColorClip((1280, 720), color=(18, 18, 30)).set_duration(3)
+    scene3 = CompositeVideoClip([
+        scene3_bg,
+        ImageClip(tmp_value.name).set_position("center").fadein(0.6)
+    ])
 
-product_clip = (
-    ImageClip(tmp_img.name)
-    .set_duration(3)
-    .set_position("center")
-    .resize(lambda t: 1 + 0.05 * t)
-    .fadein(0.6)
-)
+    # ---------- SCENE 4 ----------
+    scene4_bg = ColorClip((1280, 720), color=(0, 0, 0)).set_duration(2)
+    cta_img = make_text_image("EXPERIENCE IT TODAY")
+    tmp_cta = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    cta_img.save(tmp_cta.name)
 
-scene2 = CompositeVideoClip([scene2_bg, product_clip])
+    scene4 = CompositeVideoClip([
+        scene4_bg,
+        ImageClip(tmp_cta.name).set_position("center").fadein(0.6)
+    ])
 
-# ---------- SCENE 3 : VALUE ----------
-scene3_bg = ColorClip((1280, 720), color=(28, 28, 45)).set_duration(3)
+    # ---------- FINAL VIDEO ----------
+    final_video = concatenate_videoclips(
+        [scene1, scene2, scene3, scene4],
+        method="compose"
+    ).set_audio(final_audio)
 
-value_img = make_text_image(
-    lines[1].upper() if len(lines) > 1 else "BUILT FOR THE FUTURE",
-    size=(1000, 180)
-)
-tmp_value = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-value_img.save(tmp_value.name)
+    fd, tmp_video_path = tempfile.mkstemp(suffix=".mp4")
+    os.close(fd)
 
-scene3_text = (
-    ImageClip(tmp_value.name)
-    .set_duration(3)
-    .set_position("center")
-    .fadein(0.6)
-)
+    final_video.write_videofile(
+        tmp_video_path,
+        fps=24,
+        codec="libx264",
+        audio_codec="aac",
+        verbose=False,
+        logger=None
+    )
 
-scene3 = CompositeVideoClip([scene3_bg, scene3_text])
-
-# ---------- SCENE 4 : CTA ----------
-scene4_bg = ColorClip((1280, 720), color=(0, 0, 0)).set_duration(2)
-
-cta_img = make_text_image("EXPERIENCE IT TODAY", size=(1000, 180))
-tmp_cta = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-cta_img.save(tmp_cta.name)
-
-scene4_text = (
-    ImageClip(tmp_cta.name)
-    .set_duration(2)
-    .set_position("center")
-    .fadein(0.6)
-)
-
-scene4 = CompositeVideoClip([scene4_bg, scene4_text])
-
-# ---------- FINAL VIDEO ----------
-final_video = concatenate_videoclips(
-    [scene1, scene2, scene3, scene4],
-    method="compose"
-).set_audio(final_audio)
-
-   # ---------- FINAL VIDEO ----------
-final_video = concatenate_videoclips(
-    [scene1, scene2, scene3, scene4],
-    method="compose"
-).set_audio(final_audio)
-
-fd, tmp_video_path = tempfile.mkstemp(suffix=".mp4")
-os.close(fd)
-
-final_video.write_videofile(
-    tmp_video_path,
-    fps=24,
-    codec="libx264",
-    audio_codec="aac",
-    verbose=False,
-    logger=None
-)
-
-return tmp_video_path
+    return tmp_video_path
 # ---------------- PROFILE ICON ----------------
 if st.session_state.user_gender == "Male":
     profile_icon = "https://i.postimg.cc/5tTtnXH0/Screenshot_2026_01_23_010056.png"
