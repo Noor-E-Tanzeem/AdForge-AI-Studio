@@ -323,42 +323,41 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     total_duration = final_audio.duration
 
     # ---------- BACKGROUND ----------
-    bg = ColorClip(
-        (1280, 720),
-        color=(10, 10, 20)
-    ).set_duration(total_duration)
-    overlay = ColorClip(
-    (1280, 720),
-    color=(0, 0, 0)
-).set_opacity(0.25).set_duration(total_duration)
-    top_bar = ColorClip(
-    (1280, 80),
-    color=(0, 0, 0)
-).set_position(("center", "top")).set_duration(total_duration)
+    bg = ColorClip((1280, 720), color=(10, 10, 20)).set_duration(total_duration)
 
-bottom_bar = ColorClip(
-    (1280, 80),
-    color=(0, 0, 0)
-).set_position(("center", "bottom")).set_duration(total_duration)
+    overlay = (
+        ColorClip((1280, 720), color=(0, 0, 0))
+        .set_opacity(0.25)
+        .set_duration(total_duration)
+    )
+
+    top_bar = (
+        ColorClip((1280, 80), color=(0, 0, 0))
+        .set_position(("center", "top"))
+        .set_duration(total_duration)
+    )
+
+    bottom_bar = (
+        ColorClip((1280, 80), color=(0, 0, 0))
+        .set_position(("center", "bottom"))
+        .set_duration(total_duration)
+    )
 
     # ---------- PRODUCT IMAGE ----------
     img = Image.open(product_img_path).convert("RGBA")
-    img = img.resize((520, 520))  # PIL resize ONLY (safe)
+    img = img.resize((520, 520))
 
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
-   product_clip = (
-    ImageClip(tmp_img.name)
-    .set_duration(total_duration)
-    .resize(lambda t: 1 + 0.03 * t)   # slow cinematic zoom
-    .set_position(lambda t: (
-        "center",
-        360 - int(10 * t)             # gentle upward drift
-    ))
-    .fadein(0.8)
-    .fadeout(0.8)
-)
+    product_clip = (
+        ImageClip(tmp_img.name)
+        .set_duration(total_duration)
+        .resize(lambda t: 1 + 0.03 * t)
+        .set_position(lambda t: ("center", 360 - int(10 * t)))
+        .fadein(0.8)
+        .fadeout(0.8)
+    )
 
     # ---------- TEXT ----------
     lines = [
@@ -371,34 +370,29 @@ bottom_bar = ColorClip(
     text_clips = []
     t = 0
 
-   for i, line in enumerate(lines):
-    # First line = HOOK (bigger text)
-    size = (1000, 220) if i == 0 else (900, 160)
+    for i, line in enumerate(lines):
+        size = (1000, 220) if i == 0 else (900, 160)
 
-    txt_img = make_text_image(
-        line.upper(),
-        size=size)
-    )
+        txt_img = make_text_image(line.upper(), size=size)
+        tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        txt_img.save(tmp_txt.name)
 
-    tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    txt_img.save(tmp_txt.name)
+        clip = (
+            ImageClip(tmp_txt.name)
+            .set_start(t)
+            .set_duration(per_line)
+            .set_position(("center", 500))
+            .fadein(0.4)
+            .fadeout(0.4)
+        )
 
-    clip = (
-        ImageClip(tmp_txt.name)
-        .set_start(t)
-        .set_duration(per_line)
-        .set_position(("center", 500))  # moved up = cinematic
-        .fadein(0.4)
-        .fadeout(0.4)
-    )
-
-    text_clips.append(clip)
-    t += per_line
+        text_clips.append(clip)
+        t += per_line
 
     # ---------- FINAL VIDEO ----------
     final_video = CompositeVideoClip(
-    [bg, product_clip, overlay,top_bar,bottom_bar] + text_clips
-).set_audio(final_audio)
+        [bg, product_clip, overlay, top_bar, bottom_bar] + text_clips
+    ).set_audio(final_audio)
 
     tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final_video.write_videofile(
