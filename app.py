@@ -8,6 +8,7 @@ import base64
 import random 
 import tempfile
 import os
+import textwrap
 
 # ---------- SAFE MOVIEPY IMPORT ----------
 try:
@@ -268,7 +269,7 @@ def generate_voiceover(text):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tts.save(tmp.name)
     return tmp.name
-    import textwrap
+ 
 
 def make_text_image(
     text,
