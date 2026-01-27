@@ -303,79 +303,68 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
         bgm = None
 
     # ---------- MIX AUDIO ----------
-    if bgm:
-        final_audio = CompositeAudioClip([bgm, voice])
-    else:
-        final_audio = voice
+    final_audio = CompositeAudioClip([bgm, voice]) if bgm else voice
+    total_duration = final_audio.duration
+
+    # ---------- BACKGROUND ----------
+    bg = ColorClip(
+        (1280, 720),
+        color=(10, 10, 20)
+    ).set_duration(total_duration)
 
     # ---------- PRODUCT IMAGE ----------
     img = Image.open(product_img_path).convert("RGBA")
-    img = img.resize((520, 520))
+    img = img.resize((520, 520))  # PIL resize is SAFE
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
-    # ---------- SCRIPT LINES ----------
+    product_clip = (
+        ImageClip(tmp_img.name)
+        .set_duration(total_duration)
+        .set_position(lambda t: (
+            "center",
+            360 - int(12 * t)   # cinematic vertical drift
+        ))
+        .fadein(0.8)
+        .fadeout(0.8)
+    )
+
+    # ---------- TEXT ANIMATION ----------
     lines = [
         l.strip()
         for l in clean_script_for_voice(st.session_state.script).split("\n")
         if l.strip()
     ]
 
-    # ---------- SCENE 1 ----------
-    scene1_bg = ColorClip((1280, 720), color=(8, 8, 18)).set_duration(2)
-    hook_img = make_text_image(lines[0].upper())
-    tmp_hook = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    hook_img.save(tmp_hook.name)
+    per_line = max(1.2, total_duration / max(len(lines), 1))
+    text_clips = []
+    t = 0
 
-    scene1 = CompositeVideoClip([
-        scene1_bg,
-        ImageClip(tmp_hook.name).set_position("center").fadein(0.6)
-    ])
+    for line in lines:
+        txt_img = make_text_image(line.upper(), size=(1000, 160))
+        tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        txt_img.save(tmp_txt.name)
 
-    # ---------- SCENE 2 ----------
-    scene2_bg = ColorClip((1280, 720), color=(18, 18, 30)).set_duration(3)
-    product_clip = (
-    ImageClip(tmp_img.name)
-    .set_duration(3)
-    .set_position("center")
-    .resize(1.08)   # subtle zoom, NO animation
-    .fadein(0.6)
-)
-    scene2 = CompositeVideoClip([scene2_bg, product_clip])
+        clip = (
+            ImageClip(tmp_txt.name)
+            .set_start(t)
+            .set_duration(per_line)
+            .set_position(("center", 560))
+            .fadein(0.4)
+            .fadeout(0.4)
+        )
 
-    # ---------- SCENE 3 ----------
-    scene3_bg = ColorClip((1280, 720), color=(28, 28, 45)).set_duration(3)
-    value_img = make_text_image(lines[1] if len(lines) > 1 else "BUILT FOR THE FUTURE")
-    tmp_value = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    value_img.save(tmp_value.name)
-
-    scene3 = CompositeVideoClip([
-        scene3_bg,
-        ImageClip(tmp_value.name).set_position("center").fadein(0.6)
-    ])
-
-    # ---------- SCENE 4 ----------
-    scene4_bg = ColorClip((1280, 720), color=(0, 0, 0)).set_duration(2)
-    cta_img = make_text_image("EXPERIENCE IT TODAY")
-    tmp_cta = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    cta_img.save(tmp_cta.name)
-
-    scene4 = CompositeVideoClip([
-        scene4_bg,
-        ImageClip(tmp_cta.name).set_position("center").fadein(0.6)
-    ])
+        text_clips.append(clip)
+        t += per_line
 
     # ---------- FINAL VIDEO ----------
-    final_video = concatenate_videoclips(
-        [scene1, scene2, scene3, scene4],
-        method="compose"
+    final_video = CompositeVideoClip(
+        [bg, product_clip] + text_clips
     ).set_audio(final_audio)
 
-    fd, tmp_video_path = tempfile.mkstemp(suffix=".mp4")
-    os.close(fd)
-
+    tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final_video.write_videofile(
-        tmp_video_path,
+        tmp_video.name,
         fps=24,
         codec="libx264",
         audio_codec="aac",
@@ -383,7 +372,7 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
         logger=None
     )
 
-    return tmp_video_path
+    return tmp_video.name
 # ---------------- PROFILE ICON ----------------
 if st.session_state.user_gender == "Male":
     profile_icon = "https://i.postimg.cc/5tTtnXH0/Screenshot_2026_01_23_010056.png"
