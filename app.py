@@ -268,6 +268,42 @@ def generate_voiceover(text):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tts.save(tmp.name)
     return tmp.name
+    import textwrap
+
+def make_text_image(
+    text,
+    size=(1000, 160),
+    max_font_size=64,
+    min_font_size=28
+):
+    img = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    for font_size in range(max_font_size, min_font_size, -2):
+        try:
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+
+        wrapped = textwrap.fill(text, width=22)
+        bbox = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=6)
+
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+
+        if text_w <= size[0] - 40 and text_h <= size[1] - 20:
+            draw.multiline_text(
+                ((size[0] - text_w)//2, (size[1] - text_h)//2),
+                wrapped,
+                font=font,
+                fill=(255, 215, 0, 255),
+                align="center",
+                spacing=6
+            )
+            return img
+
+    draw.text((20, size[1]//2), text[:30], fill="yellow")
+    return img
 
 def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     # ---------- LOAD VOICE ----------
