@@ -6,6 +6,8 @@ from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import base64
 import random 
+import tempfile
+import os
 
 # ---------- SAFE MOVIEPY IMPORT ----------
 try:
@@ -391,17 +393,25 @@ final_video = concatenate_videoclips(
     method="compose"
 ).set_audio(final_audio)
 
-    tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    final_video.write_videofile(
-        tmp_video.name,
-        fps=24,
-        codec="libx264",
-        audio_codec="aac",
-        verbose=False,
-        logger=None
-    )
+   # ---------- FINAL VIDEO ----------
+final_video = concatenate_videoclips(
+    [scene1, scene2, scene3, scene4],
+    method="compose"
+).set_audio(final_audio)
 
-    return tmp_video.name
+fd, tmp_video_path = tempfile.mkstemp(suffix=".mp4")
+os.close(fd)
+
+final_video.write_videofile(
+    tmp_video_path,
+    fps=24,
+    codec="libx264",
+    audio_codec="aac",
+    verbose=False,
+    logger=None
+)
+
+return tmp_video_path
 # ---------------- PROFILE ICON ----------------
 if st.session_state.user_gender == "Male":
     profile_icon = "https://i.postimg.cc/5tTtnXH0/Screenshot_2026_01_23_010056.png"
