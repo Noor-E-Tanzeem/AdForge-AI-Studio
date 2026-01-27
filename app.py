@@ -331,6 +331,15 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     (1280, 720),
     color=(0, 0, 0)
 ).set_opacity(0.25).set_duration(total_duration)
+    top_bar = ColorClip(
+    (1280, 80),
+    color=(0, 0, 0)
+).set_position(("center", "top")).set_duration(total_duration)
+
+bottom_bar = ColorClip(
+    (1280, 80),
+    color=(0, 0, 0)
+).set_position(("center", "bottom")).set_duration(total_duration)
 
     # ---------- PRODUCT IMAGE ----------
     img = Image.open(product_img_path).convert("RGBA")
@@ -339,11 +348,14 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
-    product_clip = (
+   product_clip = (
     ImageClip(tmp_img.name)
     .set_duration(total_duration)
-    .resize(lambda t: 1.0 + 0.04 * t)  # slow cinematic zoom
-    .set_position("center")
+    .resize(lambda t: 1 + 0.03 * t)   # slow cinematic zoom
+    .set_position(lambda t: (
+        "center",
+        360 - int(10 * t)             # gentle upward drift
+    ))
     .fadein(0.8)
     .fadeout(0.8)
 )
@@ -355,7 +367,7 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
         if l.strip()
     ]
 
-    per_line = max(1.2, total_duration / max(len(lines), 1))
+    per_line = max(1.6, voice.duration / max(len(lines), 1))
     text_clips = []
     t = 0
 
@@ -365,7 +377,7 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
 
     txt_img = make_text_image(
         line.upper(),
-        size=size
+        size=size)
     )
 
     tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
@@ -385,7 +397,7 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
 
     # ---------- FINAL VIDEO ----------
     final_video = CompositeVideoClip(
-    [bg, product_clip, overlay] + text_clips
+    [bg, product_clip, overlay,top_bar,bottom_bar] + text_clips
 ).set_audio(final_audio)
 
     tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
