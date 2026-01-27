@@ -350,14 +350,17 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
-    product_clip = (
-        ImageClip(tmp_img.name)
-        .set_duration(total_duration)
-        .resize(lambda t: 1 + 0.03 * t)
-        .set_position(lambda t: ("center", 360 - int(10 * t)))
-        .fadein(0.8)
-        .fadeout(0.8)
-    )
+   product_clip = (
+    ImageClip(tmp_img.name)
+    .resize(1.08)  # static upscale (NO animation → no crash)
+    .set_duration(total_duration)
+    .set_position(lambda t: (
+        "center",
+        360 - int(8 * t)   # gentle cinematic drift
+    ))
+    .fadein(0.8)
+    .fadeout(0.8)
+)
 
     # ---------- TEXT ----------
     lines = [
