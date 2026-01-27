@@ -327,6 +327,10 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
         (1280, 720),
         color=(10, 10, 20)
     ).set_duration(total_duration)
+    overlay = ColorClip(
+    (1280, 720),
+    color=(0, 0, 0)
+).set_opacity(0.25).set_duration(total_duration)
 
     # ---------- PRODUCT IMAGE ----------
     img = Image.open(product_img_path).convert("RGBA")
@@ -336,12 +340,13 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     img.save(tmp_img.name)
 
     product_clip = (
-        ImageClip(tmp_img.name)
-        .set_duration(total_duration)
-        .set_position("center")
-        .fadein(0.6)
-        .fadeout(0.6)
-    )
+    ImageClip(tmp_img.name)
+    .set_duration(total_duration)
+    .resize(lambda t: 1.0 + 0.04 * t)  # slow cinematic zoom
+    .set_position("center")
+    .fadein(0.8)
+    .fadeout(0.8)
+)
 
     # ---------- TEXT ----------
     lines = [
@@ -354,27 +359,34 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     text_clips = []
     t = 0
 
-    for line in lines:
-        txt_img = make_text_image(line.upper(), size=(1000, 160))
-        tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        txt_img.save(tmp_txt.name)
+   for i, line in enumerate(lines):
+    # First line = HOOK (bigger text)
+    size = (1000, 220) if i == 0 else (900, 160)
 
-        clip = (
-            ImageClip(tmp_txt.name)
-            .set_start(t)
-            .set_duration(per_line)
-            .set_position(("center", 560))
-            .fadein(0.4)
-            .fadeout(0.4)
-        )
+    txt_img = make_text_image(
+        line.upper(),
+        size=size
+    )
 
-        text_clips.append(clip)
-        t += per_line
+    tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    txt_img.save(tmp_txt.name)
+
+    clip = (
+        ImageClip(tmp_txt.name)
+        .set_start(t)
+        .set_duration(per_line)
+        .set_position(("center", 500))  # moved up = cinematic
+        .fadein(0.4)
+        .fadeout(0.4)
+    )
+
+    text_clips.append(clip)
+    t += per_line
 
     # ---------- FINAL VIDEO ----------
     final_video = CompositeVideoClip(
-        [bg, product_clip] + text_clips
-    ).set_audio(final_audio)
+    [bg, product_clip, overlay] + text_clips
+).set_audio(final_audio)
 
     tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final_video.write_videofile(
