@@ -350,7 +350,7 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
-   product_clip = (
+product_clip = (
     ImageClip(tmp_img.name)
     .resize(1.08)  # static upscale (NO animation → no crash)
     .set_duration(total_duration)
