@@ -269,27 +269,49 @@ def generate_voiceover(text):
     tts.save(tmp.name)
     return tmp.name
 
-def make_text_image(text, size=(1100, 200)):
+import textwrap
+
+def make_text_image(
+    text,
+    size=(1000, 220),
+    max_font_size=64,
+    min_font_size=28
+):
     img = Image.new("RGBA", size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 64)
-    except:
-        font = ImageFont.load_default()
 
-    bbox = draw.textbbox((0, 0), text, font=font)
-    w = bbox[2] - bbox[0]
-    h = bbox[3] - bbox[1]
+    # Try fonts from large → small
+    for font_size in range(max_font_size, min_font_size, -2):
+        try:
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
 
-    draw.text(
-        ((size[0] - w) // 2, (size[1] - h) // 2),
-        text,
-        font=font,
-        fill=(255, 215, 0, 255)
-    )
+        # Wrap text intelligently
+        wrapped = textwrap.fill(text, width=22)
+        bbox = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=6)
+
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+
+        # Check if it fits
+        if text_w <= size[0] - 40 and text_h <= size[1] - 20:
+            x = (size[0] - text_w) // 2
+            y = (size[1] - text_h) // 2
+
+            draw.multiline_text(
+                (x, y),
+                wrapped,
+                font=font,
+                fill=(255, 215, 0, 255),
+                align="center",
+                spacing=6
+            )
+            return img
+
+    # Fallback (should rarely happen)
+    draw.text((20, size[1]//2), text[:30], fill="yellow")
     return img
-def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
-
     # ---------- LOAD VOICE ----------
     voice = AudioFileClip(voice_path)
     voice = volumex(voice, 1.4)
