@@ -269,63 +269,20 @@ def generate_voiceover(text):
     tts.save(tmp.name)
     return tmp.name
 
-import textwrap
-
-def make_text_image(
-    text,
-    size=(1000, 220),
-    max_font_size=64,
-    min_font_size=28
-):
-    img = Image.new("RGBA", size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    # Try fonts from large → small
-    for font_size in range(max_font_size, min_font_size, -2):
-        try:
-            font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size)
-        except:
-            font = ImageFont.load_default()
-
-        # Wrap text intelligently
-        wrapped = textwrap.fill(text, width=22)
-        bbox = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=6)
-
-        text_w = bbox[2] - bbox[0]
-        text_h = bbox[3] - bbox[1]
-
-        # Check if it fits
-        if text_w <= size[0] - 40 and text_h <= size[1] - 20:
-            x = (size[0] - text_w) // 2
-            y = (size[1] - text_h) // 2
-
-            draw.multiline_text(
-                (x, y),
-                wrapped,
-                font=font,
-                fill=(255, 215, 0, 255),
-                align="center",
-                spacing=6
-            )
-            return img
-
-    # Fallback (should rarely happen)
-    draw.text((20, size[1]//2), text[:30], fill="yellow")
-    return img
+def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     # ---------- LOAD VOICE ----------
     voice = AudioFileClip(voice_path)
-    voice = volumex(voice, 1.4)
+    voice = volumex(voice, 1.3)
 
-    # ---------- LOAD BGM ----------
+    # ---------- OPTIONAL BGM ----------
     try:
         bgm = AudioFileClip("assets/bgm/default.mp3")
         bgm = audio_loop(bgm, duration=voice.duration)
         bgm = volumex(bgm, 0.25)
+        final_audio = CompositeAudioClip([bgm, voice])
     except:
-        bgm = None
+        final_audio = voice
 
-    # ---------- MIX AUDIO ----------
-    final_audio = CompositeAudioClip([bgm, voice]) if bgm else voice
     total_duration = final_audio.duration
 
     # ---------- BACKGROUND ----------
@@ -336,22 +293,20 @@ def make_text_image(
 
     # ---------- PRODUCT IMAGE ----------
     img = Image.open(product_img_path).convert("RGBA")
-    img = img.resize((520, 520))  # PIL resize is SAFE
+    img = img.resize((520, 520))  # PIL resize ONLY (safe)
+
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
     product_clip = (
         ImageClip(tmp_img.name)
         .set_duration(total_duration)
-        .set_position(lambda t: (
-            "center",
-            360 - int(12 * t)   # cinematic vertical drift
-        ))
-        .fadein(0.8)
-        .fadeout(0.8)
+        .set_position("center")
+        .fadein(0.6)
+        .fadeout(0.6)
     )
 
-    # ---------- TEXT ANIMATION ----------
+    # ---------- TEXT ----------
     lines = [
         l.strip()
         for l in clean_script_for_voice(st.session_state.script).split("\n")
