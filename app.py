@@ -308,58 +308,88 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
 
     total_duration = final_audio.duration
 
-    # ---------- BACKGROUND ----------
-    bg = ColorClip(
-        (1280, 720),
-        color=(18, 18, 28)
-    ).set_duration(total_duration)
-
     # ---------- PRODUCT IMAGE ----------
-    img = Image.open(product_img_path).convert("RGBA")
-    img = img.resize((520, 520))
-    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    img.save(tmp_img.name)
+img = Image.open(product_img_path).convert("RGBA")
+img = img.resize((520, 520))
+tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+img.save(tmp_img.name)
 
-    product_clip = (
-        ImageClip(tmp_img.name)
-        .set_duration(total_duration)
-        .set_position("center")
-        .fadein(0.8)
-        .fadeout(0.8)
-    )
+# ---------- SCRIPT LINES ----------
+lines = [
+    l.strip()
+    for l in clean_script_for_voice(st.session_state.script).split("\n")
+    if l.strip()
+]
 
-    # ---------- TEXT ANIMATION ----------
-    lines = [
-        l.strip()
-        for l in clean_script_for_voice(st.session_state.script).split("\n")
-        if l.strip()
-    ]
+# ---------- SCENE 1 : HOOK ----------
+scene1_bg = ColorClip((1280, 720), color=(8, 8, 18)).set_duration(2)
 
-    per_line = max(1.2, total_duration / max(len(lines), 1))
-    text_clips = []
-    t = 0
+hook_img = make_text_image(lines[0].upper(), size=(1000, 200))
+tmp_hook = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+hook_img.save(tmp_hook.name)
 
-    for line in lines:
-        txt_img = make_text_image(line.upper(), size=(1000, 160))
-        tmp_txt = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        txt_img.save(tmp_txt.name)
+scene1_text = (
+    ImageClip(tmp_hook.name)
+    .set_duration(2)
+    .set_position("center")
+    .fadein(0.6)
+)
 
-        clip = (
-            ImageClip(tmp_txt.name)
-            .set_start(t)
-            .set_duration(per_line)
-            .set_position(("center", 540))
-            .fadein(0.4)
-            .fadeout(0.4)
-        )
+scene1 = CompositeVideoClip([scene1_bg, scene1_text])
 
-        text_clips.append(clip)
-        t += per_line
+# ---------- SCENE 2 : PRODUCT REVEAL ----------
+scene2_bg = ColorClip((1280, 720), color=(18, 18, 30)).set_duration(3)
 
-    # ---------- FINAL VIDEO ----------
-    final_video = CompositeVideoClip(
-        [bg, product_clip] + text_clips
-    ).set_audio(final_audio)
+product_clip = (
+    ImageClip(tmp_img.name)
+    .set_duration(3)
+    .set_position("center")
+    .resize(lambda t: 1 + 0.05 * t)
+    .fadein(0.6)
+)
+
+scene2 = CompositeVideoClip([scene2_bg, product_clip])
+
+# ---------- SCENE 3 : VALUE ----------
+scene3_bg = ColorClip((1280, 720), color=(28, 28, 45)).set_duration(3)
+
+value_img = make_text_image(
+    lines[1].upper() if len(lines) > 1 else "BUILT FOR THE FUTURE",
+    size=(1000, 180)
+)
+tmp_value = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+value_img.save(tmp_value.name)
+
+scene3_text = (
+    ImageClip(tmp_value.name)
+    .set_duration(3)
+    .set_position("center")
+    .fadein(0.6)
+)
+
+scene3 = CompositeVideoClip([scene3_bg, scene3_text])
+
+# ---------- SCENE 4 : CTA ----------
+scene4_bg = ColorClip((1280, 720), color=(0, 0, 0)).set_duration(2)
+
+cta_img = make_text_image("EXPERIENCE IT TODAY", size=(1000, 180))
+tmp_cta = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+cta_img.save(tmp_cta.name)
+
+scene4_text = (
+    ImageClip(tmp_cta.name)
+    .set_duration(2)
+    .set_position("center")
+    .fadein(0.6)
+)
+
+scene4 = CompositeVideoClip([scene4_bg, scene4_text])
+
+# ---------- FINAL VIDEO ----------
+final_video = concatenate_videoclips(
+    [scene1, scene2, scene3, scene4],
+    method="compose"
+).set_audio(final_audio)
 
     tmp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     final_video.write_videofile(
