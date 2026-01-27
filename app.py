@@ -362,7 +362,7 @@ product_clip = (
         .fadeout(0.8)
     )
     # ---------- TEXT ----------
-    lines = [
+lines = [
         l.strip()
         for l in clean_script_for_voice(st.session_state.script).split("\n")
         if l.strip()
