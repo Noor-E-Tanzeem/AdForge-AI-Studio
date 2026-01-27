@@ -334,7 +334,13 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
 
     # ---------- SCENE 2 ----------
     scene2_bg = ColorClip((1280, 720), color=(18, 18, 30)).set_duration(3)
-    product_clip = ImageClip(tmp_img.name).set_position("center").resize(lambda t: 1 + 0.05*t)
+    product_clip = (
+    ImageClip(tmp_img.name)
+    .set_duration(3)
+    .set_position("center")
+    .resize(1.08)   # subtle zoom, NO animation
+    .fadein(0.6)
+)
     scene2 = CompositeVideoClip([scene2_bg, product_clip])
 
     # ---------- SCENE 3 ----------
