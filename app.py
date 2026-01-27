@@ -350,8 +350,8 @@ def generate_product_ad_video(product_img_path, voice_path, slogan, tone):
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp_img.name)
 
-# ---------- PRODUCT CLIP ----------
-product_clip = (
+    # ---------- PRODUCT CLIP ----------
+    product_clip = (
         ImageClip(tmp_img.name)
         .set_duration(total_duration)
         .set_position(lambda t: (
@@ -361,14 +361,15 @@ product_clip = (
         .fadein(0.8)
         .fadeout(0.8)
     )
+
     # ---------- TEXT ----------
-lines = [
+    lines = [
         l.strip()
         for l in clean_script_for_voice(st.session_state.script).split("\n")
         if l.strip()
     ]
 
-    per_line = max(1.6, voice.duration / max(len(lines), 1))
+    per_line = max(1.6, total_duration / max(len(lines), 1))
     text_clips = []
     t = 0
 
@@ -390,6 +391,7 @@ lines = [
 
         text_clips.append(clip)
         t += per_line
+
     # ---------- FINAL VIDEO ----------
     final_video = CompositeVideoClip(
         [bg, product_clip, overlay, top_bar, bottom_bar] + text_clips
